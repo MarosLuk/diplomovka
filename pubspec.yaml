@@ -1,0 +1,38 @@
+name: diplomovka
+description: "Diplomovka"
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_svg: ^2.0.4
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1
+  video_player: ^2.3.0
+  flutter_xlider: ^3.5.0
+  syncfusion_flutter_gauges: ^26.2.10
+  flutter_datetime_picker: ^1.5.1
+  month_year_picker: ^0.4.0+1
+  intl: ^0.19.0
+  path_provider: ^2.1.4
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - lib/assets/images_videos/
+    - lib/assets/icons/
+    - lib/assets/icons/sports/
+    - lib/assets/images_videos/burgers/
