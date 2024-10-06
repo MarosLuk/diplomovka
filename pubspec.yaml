@@ -21,6 +21,16 @@ dependencies:
   month_year_picker: ^0.4.0+1
   intl: ^0.19.0
   path_provider: ^2.1.4
+  shared_preferences: ^2.3.2
+  firebase_core: ^3.5.0
+  firebase_auth: ^5.3.0
+  cloud_firestore: ^5.4.3
+  firebase_storage: ^12.3.2
+  fluttertoast: ^8.2.8
+  google_sign_in: ^6.2.1
+  flutter_riverpod: ^2.5.1
+  connectivity_plus: ^6.0.5
+
 
 
 dev_dependencies:
@@ -34,5 +44,4 @@ flutter:
   assets:
     - lib/assets/images_videos/
     - lib/assets/icons/
-    - lib/assets/icons/sports/
-    - lib/assets/images_videos/burgers/
+

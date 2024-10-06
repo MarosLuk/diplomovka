@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:diplomovka/assets/colorsStyles/testStyles.dart';
+import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 

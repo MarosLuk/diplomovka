@@ -1,16 +1,21 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:month_year_picker/month_year_picker.dart';
-import 'assets/colorsStyles/testStyles.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // Import Riverpod
+import 'package:firebase_core/firebase_core.dart';
+import 'package:diplomovka/pages/features/user_auth/presentation/pages/homePage.dart';
+import 'package:diplomovka/pages/features/user_auth/presentation/pages/signUpPage.dart';
+import 'package:diplomovka/pages/features/user_auth/presentation/pages/loginPage.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Import SharedPreferences
+import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
+import 'package:diplomovka/pages/features/app/global/toast.dart';
 
-import 'package:diplomovka/assets/dataClasses/onboardingData.dart';
-
-void main() {
-  // Lock the orientation to portrait mode
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(); // Initialize Firebase
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  runApp(const MyApp());
+
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatefulWidget {
@@ -22,6 +27,31 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   bool _isDarkMode = false;
+  bool _isFirebaseInitialized = false;
+  bool _isLoggedIn = false; // Track the user's login status
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeFirebase();
+  }
+
+  // Check if the user selected "Remember me" and Firebase initialization
+  Future<void> _initializeFirebase() async {
+    try {
+      // Initialize Firebase and check for "Remember me"
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      bool rememberMe = prefs.getBool('rememberMe') ?? false;
+      setState(() {
+        _isLoggedIn = rememberMe && FirebaseAuth.instance.currentUser != null;
+        _isFirebaseInitialized = true;
+      });
+      print("Firebase initialized successfully");
+    } catch (e) {
+      print("Error initializing Firebase: $e");
+      showToast(message: "Error initializing Firebase: $e");
+    }
+  }
 
   void _toggleTheme() {
     setState(() {
@@ -31,6 +61,17 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_isFirebaseInitialized) {
+      return const MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      );
+    }
+
+    // If the user is already logged in, go directly to the HomePage
     return AnimatedTheme(
       data: _isDarkMode ? _darkTheme() : _lightTheme(),
       duration: const Duration(milliseconds: 300),
@@ -38,15 +79,19 @@ class _MyAppState extends State<MyApp> {
         builder: (context, constraints) {
           return Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                  maxWidth: 600), // Set the maximum width here
+              constraints: const BoxConstraints(maxWidth: 600),
               child: MaterialApp(
                 theme: _lightTheme(),
                 darkTheme: _darkTheme(),
                 themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
-                initialRoute: '/',
+                initialRoute: _isLoggedIn
+                    ? '/home'
+                    : '/', // Redirect to home if logged in
                 routes: {
-                  //'/': (context) => const LandingPage(),
+                  '/': (context) => const LoginPage(),
+                  '/home': (context) => const HomePage(),
+                  '/login': (context) => const LoginPage(),
+                  '/signUp': (context) => const SignUpPage(),
                 },
               ),
             ),
@@ -59,10 +104,14 @@ class _MyAppState extends State<MyApp> {
   ThemeData _lightTheme() {
     return ThemeData(
       brightness: Brightness.light,
-      primaryColor: Colors.blue,
-      scaffoldBackgroundColor: AppStyles.Background(),
+      primaryColor: Colors.white,
+      colorScheme: ColorScheme.fromSwatch().copyWith(
+        primary: Colors.white, // Primary color
+        secondary: Colors.deepPurple[900],
+      ),
+      scaffoldBackgroundColor: Colors.deepPurple[900],
       appBarTheme: AppBarTheme(
-        backgroundColor: AppStyles.Background(),
+        backgroundColor: Colors.deepPurple[900],
         iconTheme: IconThemeData(color: AppStyles.onBackground()),
       ),
       textTheme: TextTheme(
