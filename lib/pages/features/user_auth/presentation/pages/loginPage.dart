@@ -14,7 +14,7 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   bool _isSigning = false;
-  bool _rememberMe = false; // For handling "Remember me"
+  bool _rememberMe = false;
   final FirebaseAuthService _auth = FirebaseAuthService();
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
 
@@ -34,7 +34,6 @@ class _LoginPageState extends State<LoginPage> {
     _checkRememberMe();
   }
 
-  // Check if user selected "Remember me" and auto login
   Future<void> _checkRememberMe() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     bool rememberMe = prefs.getBool('rememberMe') ?? false;
@@ -189,7 +188,6 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  // Sign-in method with Firebase
   Future<void> _signIn() async {
     setState(() {
       _isSigning = true;
@@ -206,7 +204,6 @@ class _LoginPageState extends State<LoginPage> {
 
       if (user != null) {
         if (_rememberMe) {
-          // Save the "Remember me" status
           SharedPreferences prefs = await SharedPreferences.getInstance();
           await prefs.setBool('rememberMe', true);
         }
@@ -222,7 +219,6 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  // Sign in with Google
   Future<void> _signInWithGoogle() async {
     final GoogleSignIn _googleSignIn = GoogleSignIn();
 

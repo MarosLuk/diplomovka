@@ -48,7 +48,6 @@ class _ProfilePageState extends State<ProfilePage> {
     String newPassword = passwordController.text;
 
     try {
-      // Check if email already exists
       QuerySnapshot emailCheck = await FirebaseFirestore.instance
           .collection('users')
           .where('email', isEqualTo: newEmail)
@@ -59,17 +58,14 @@ class _ProfilePageState extends State<ProfilePage> {
         return;
       }
 
-      // Update email in FirebaseAuth
       if (newEmail != user!.email) {
         await user!.updateEmail(newEmail);
       }
 
-      // Update password if it is not empty
       if (newPassword.isNotEmpty) {
         await user!.updatePassword(newPassword);
       }
 
-      // Update user profile in Firestore
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user!.uid)
@@ -80,7 +76,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
       showToast(message: "Profile updated successfully");
 
-      // Return the updated username to the HomePage
       Navigator.pop(context, newUsername);
     } catch (e) {
       showToast(message: "Error updating profile: $e");
@@ -124,7 +119,6 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Profile Picture
                 Center(
                   child: CircleAvatar(
                     radius: 50,
@@ -155,7 +149,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 const SizedBox(height: 24),
 
-                // Email Field
                 Text(
                   "Email",
                   style: AppStyles.labelLarge(
@@ -178,7 +171,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 const SizedBox(height: 24),
 
-                // Password Field
                 Text(
                   "New Password",
                   style: AppStyles.labelLarge(

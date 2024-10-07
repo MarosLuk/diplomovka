@@ -1,8 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// Define a ChatModel to handle both the chat name and messages
 class ChatModel {
   String chatId;
   String chatName;
@@ -15,28 +14,68 @@ class ChatModel {
   });
 }
 
-// Define a ChatNotifier to manage the chat name and messages
 class ChatNotifier extends StateNotifier<List<ChatModel>> {
   ChatNotifier() : super([]) {
-    // Enable Firestore offline persistence
+    // Disable persistence for Firestore to avoid using offline data
     FirebaseFirestore.instance.settings = const Settings(
-      persistenceEnabled: true,
+      persistenceEnabled: false,
     );
   }
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Method to fetch all chats from Firebase
-  Future<void> fetchChats(String userId) async {
-    try {
-      final chatSnapshot = await _firestore
-          .collection('chats')
-          .where('userId',
-              isEqualTo: userId) // Fetch only the chats that belong to the user
-          .get(const GetOptions(
-              source: Source.cache)); // First try to get from cache
+  // Create a new chat, directly reflecting in Firestore without any offline checks
+  Future<String> createNewChat(String chatName, String userId) async {
+    final newChat = {
+      'chatName': chatName,
+      'userId': userId,
+      'messages': [],
+    };
 
-      final chats = chatSnapshot.docs.map((doc) {
+    final chatRef = await _firestore.collection('chats').add(newChat);
+
+    final newChatModel =
+        ChatModel(chatId: chatRef.id, chatName: chatName, messages: []);
+    state = [...state, newChatModel];
+
+    return chatRef.id;
+  }
+
+  Future<void> acceptInvite(String chatId) async {
+    final userEmail = FirebaseAuth.instance.currentUser!.email!;
+    final userId = FirebaseAuth.instance.currentUser!.uid;
+
+    // Add the user as a participant in the chat
+    await _firestore.collection('chats').doc(chatId).update({
+      'participants': FieldValue.arrayUnion([userEmail]),
+    });
+
+    // Fetch both user's own chats and chats where the user is a participant
+    fetchChats(userId, userEmail);
+  }
+
+  // Fetch both user's own chats and chats where the user is a participant
+  Future<void> fetchChats(String userId, String userEmail) async {
+    try {
+      // Fetch chats created by the user
+      final userChatsSnapshot = await _firestore
+          .collection('chats')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      // Fetch chats where the user is a participant
+      final participantChatsSnapshot = await _firestore
+          .collection('chats')
+          .where('participants', arrayContains: userEmail)
+          .get();
+
+      // Combine both sets of chats
+      final combinedDocs = [
+        ...userChatsSnapshot.docs,
+        ...participantChatsSnapshot.docs
+      ];
+
+      final chats = combinedDocs.map((doc) {
         final data = doc.data();
         return ChatModel(
           chatId: doc.id,
@@ -45,33 +84,14 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
         );
       }).toList();
 
+      // Update state with the fetched chats
       state = chats;
     } catch (e) {
       print("Error fetching chats: $e");
     }
   }
 
-  // Method to create a new chat, only if the user is online
-  Future<String> createNewChat(String chatName, String userId) async {
-    if (await _isOnline()) {
-      final newChat = {
-        'chatName': chatName,
-        'userId': userId, // Store the userId with each chat
-        'messages': [],
-      };
-      final chatRef = await _firestore.collection('chats').add(newChat);
-
-      final newChatModel =
-          ChatModel(chatId: chatRef.id, chatName: chatName, messages: []);
-      state = [...state, newChatModel];
-
-      return chatRef.id; // Return the new chat's ID
-    } else {
-      throw Exception("You must be online to create a new chat");
-    }
-  }
-
-  // Method to send a message and update Firebase
+  // Send a message to a chat, updating Firestore and local state
   Future<void> sendMessage(String chatId, String message) async {
     final chatIndex = state.indexWhere((chat) => chat.chatId == chatId);
     if (chatIndex >= 0) {
@@ -97,7 +117,7 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
     }
   }
 
-  // Method to update chat name in Firebase
+  // Update the chat name in Firestore and local state
   Future<void> updateChatName(String chatId, String newChatName) async {
     await _firestore.collection('chats').doc(chatId).update({
       'chatName': newChatName,
@@ -116,15 +136,12 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
     ];
   }
 
-  // Helper method to check if the user is online
-  Future<bool> _isOnline() async {
-    var connectivityResult = await (Connectivity().checkConnectivity());
-    return connectivityResult == ConnectivityResult.mobile ||
-        connectivityResult == ConnectivityResult.wifi;
+  // Clear state when the user logs out or no longer needs the chat list
+  void clearState() {
+    state = [];
   }
 }
 
-// Define a StateNotifierProvider for the chat
 final chatProvider = StateNotifierProvider<ChatNotifier, List<ChatModel>>(
   (ref) => ChatNotifier(),
 );

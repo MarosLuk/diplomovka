@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,8 @@ import 'package:diplomovka/pages/features/app/providers/user_provider.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/chatting/chat.dart';
 import 'package:diplomovka/pages/features/app/providers/chat_provider.dart';
+import 'package:diplomovka/pages/features/app/providers/invitation_provider.dart';
+import 'dart:async';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -16,21 +19,41 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
-  final User? user = FirebaseAuth.instance.currentUser;
+  User? user = FirebaseAuth.instance.currentUser;
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     if (user != null) {
-      // Fetch the chats for the specific user
-      ref.read(chatProvider.notifier).fetchChats(user!.uid);
+      // Initial fetch
+
+      ref.read(chatProvider.notifier).fetchChats(user!.uid, user!.email!);
+
+      // Fetch invites
+      ref.read(inviteProvider.notifier).fetchInvites(user!.email!);
+
+      // Set up periodic fetch every 2 seconds
+      _timer = Timer.periodic(Duration(seconds: 2), (timer) {
+        if (user != null) {
+          ref.read(chatProvider.notifier).fetchChats(user!.uid, user!.email!);
+          ref.read(inviteProvider.notifier).fetchInvites(user!.email!);
+        }
+      });
     }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel(); // Cancel the timer when the widget is disposed
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final username = ref.watch(usernameProvider);
     final chats = ref.watch(chatProvider);
+    final invites = ref.watch(inviteProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -59,14 +82,14 @@ class _HomePageState extends ConsumerState<HomePage> {
               color: Theme.of(context).primaryColor,
             ),
             onPressed: () async {
-              String? chatName = await _promptForChatName(context);
+              String? chatName = await ref
+                  .read(inviteProvider.notifier)
+                  .promptForChatName(context);
               if (chatName != null && chatName.isNotEmpty && user != null) {
-                // Create new chat and pass the userId
                 String chatId = await ref
                     .read(chatProvider.notifier)
                     .createNewChat(chatName, user!.uid);
 
-                // Navigate to the newly created chat page
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -126,13 +149,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                   color: Theme.of(context).colorScheme.secondary,
                 ),
               ),
-              // Set the icon color when the tile is expanded
-              iconColor: Theme.of(context)
-                  .colorScheme
-                  .secondary, // Color when expanded
-              collapsedIconColor: Theme.of(context)
-                  .colorScheme
-                  .secondary, // Color when collapsed
+              iconColor: Theme.of(context).colorScheme.secondary,
+              collapsedIconColor: Theme.of(context).colorScheme.secondary,
               children: chats.map((chat) {
                 return ListTile(
                   title: Text(chat.chatName),
@@ -143,6 +161,45 @@ class _HomePageState extends ConsumerState<HomePage> {
                         builder: (context) => ChatPage(chatId: chat.chatId),
                       ),
                     );
+                  },
+                );
+              }).toList(),
+            ),
+            ExpansionTile(
+              leading: Icon(Icons.mail,
+                  color: Theme.of(context).colorScheme.secondary),
+              title: Text('Invites',
+                  style: AppStyles.labelMedium(
+                      color: Theme.of(context).colorScheme.secondary)),
+              iconColor: Theme.of(context).colorScheme.secondary,
+              collapsedIconColor: Theme.of(context).colorScheme.secondary,
+              children: invites.map((invite) {
+                return ListTile(
+                  title: Text(
+                      "${invite['chatName']} (invited by ${invite['invitedBy']})"),
+                  onTap: () async {
+                    // Show popup for accepting or declining the invite
+                    bool accepted = await ref
+                        .read(inviteProvider.notifier)
+                        .showInvitePopup(context, invite['chatName']);
+                    if (accepted) {
+                      // Accept the invite and add user to the chat
+                      await ref.read(inviteProvider.notifier).acceptInvite(
+                          invite['inviteId'], invite['chatId'], user!.email!);
+
+                      // After accepting, fetch updated list of chats
+                      await ref
+                          .read(chatProvider.notifier)
+                          .fetchChats(user!.uid, user!.email!);
+
+                      // Navigate to the chat page
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                ChatPage(chatId: invite['chatId'])),
+                      );
+                    }
                   },
                 );
               }).toList(),
@@ -165,8 +222,13 @@ class _HomePageState extends ConsumerState<HomePage> {
                 style: AppStyles.labelMedium(
                     color: Theme.of(context).colorScheme.secondary),
               ),
-              onTap: () {
-                FirebaseAuth.instance.signOut();
+              onTap: () async {
+                ref.read(chatProvider.notifier).clearState();
+                ref.read(inviteProvider.notifier).clearState();
+                ref.read(usernameProvider.notifier).clearState();
+
+                await FirebaseAuth.instance.signOut();
+
                 Navigator.pushReplacementNamed(context, "/login");
                 showToast(message: "Successfully signed out");
               },
@@ -206,40 +268,6 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
         ),
       ),
-    );
-  }
-
-  Future<String?> _promptForChatName(BuildContext context) async {
-    TextEditingController chatNameController = TextEditingController();
-    return await showDialog<String>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Enter chat name'),
-          content: TextField(
-            controller: chatNameController,
-            decoration: const InputDecoration(hintText: "Chat name"),
-          ),
-          actions: [
-            TextButton(
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: Colors.black),
-              ),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child:
-                  const Text('Create', style: TextStyle(color: Colors.black)),
-              onPressed: () {
-                Navigator.of(context).pop(chatNameController.text);
-              },
-            ),
-          ],
-        );
-      },
     );
   }
 }
