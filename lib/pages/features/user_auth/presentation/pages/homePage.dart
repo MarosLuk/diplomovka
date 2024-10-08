@@ -153,7 +153,17 @@ class _HomePageState extends ConsumerState<HomePage> {
               collapsedIconColor: Theme.of(context).colorScheme.secondary,
               children: chats.map((chat) {
                 return ListTile(
-                  title: Text(chat.chatName),
+                  title: Padding(
+                    padding: const EdgeInsets.only(left: 8.0),
+                    child: Column(
+                      children: [
+                        Text(
+                          chat.chatName,
+                          style: AppStyles.labelLarge(color: Colors.black45),
+                        )
+                      ],
+                    ),
+                  ),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -175,8 +185,18 @@ class _HomePageState extends ConsumerState<HomePage> {
               collapsedIconColor: Theme.of(context).colorScheme.secondary,
               children: invites.map((invite) {
                 return ListTile(
-                  title: Text(
-                      "${invite['chatName']} (invited by ${invite['invitedBy']})"),
+                  title: Column(
+                    children: [
+                      Text(
+                        "${invite['chatName']}",
+                        style: AppStyles.labelLarge(color: Colors.black45),
+                      ),
+                      Text(
+                        "(invited by ${invite['invitedBy']})",
+                        style: AppStyles.labelSmall(color: Colors.black45),
+                      ),
+                    ],
+                  ),
                   onTap: () async {
                     // Show popup for accepting or declining the invite
                     bool accepted = await ref

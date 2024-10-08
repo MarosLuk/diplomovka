@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
 
 class InviteNotifier extends StateNotifier<List<Map<String, dynamic>>> {
   InviteNotifier() : super([]);
@@ -58,13 +59,23 @@ class InviteNotifier extends StateNotifier<List<Map<String, dynamic>>> {
     return await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: Text('Invitation to $chatName'),
-            content: Text('Do you want to accept this invitation?'),
+            backgroundColor: Colors.deepPurple[600],
+            title: Text(
+              'Invitation to: $chatName',
+              style: AppStyles.headLineMedium(
+                  color: Theme.of(context).colorScheme.primary),
+            ),
+            content: Text(
+              'Do you want to accept this invitation?',
+              style: AppStyles.labelMedium(
+                  color: Theme.of(context).colorScheme.primary),
+            ),
             actions: [
               TextButton(
                 child: Text(
                   'Decline',
-                  style: TextStyle(color: Colors.black45),
+                  style: AppStyles.headLineSmall(
+                      color: Theme.of(context).colorScheme.secondary),
                 ),
                 onPressed: () {
                   Navigator.pop(context, false); // Decline invite
@@ -73,7 +84,8 @@ class InviteNotifier extends StateNotifier<List<Map<String, dynamic>>> {
               TextButton(
                 child: Text(
                   'Accept',
-                  style: TextStyle(color: Colors.black45),
+                  style: AppStyles.headLineSmall(
+                      color: Theme.of(context).colorScheme.primary),
                 ),
                 onPressed: () {
                   Navigator.pop(context, true); // Accept invite
@@ -92,25 +104,35 @@ class InviteNotifier extends StateNotifier<List<Map<String, dynamic>>> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Enter chat name'),
+          backgroundColor: Colors.deepPurple[600],
+          title: Text('Enter chat name',
+              style: AppStyles.titleMedium(
+                  color: Theme.of(context).colorScheme.primary)),
           content: TextField(
             controller: chatNameController,
-            decoration: const InputDecoration(hintText: "Chat name"),
+            decoration: InputDecoration(
+                hintText: "Chat name",
+                hintStyle: AppStyles.labelLarge(color: Colors.black54)),
+            cursorColor: Theme.of(context).colorScheme.primary,
+            style: AppStyles.labelLarge(
+                color: Theme.of(context).colorScheme.primary),
           ),
           actions: [
             TextButton(
-              child: const Text(
+              child: Text(
                 'Cancel',
-                style: TextStyle(color: Colors.black),
+                style: AppStyles.labelLarge(
+                    color: Theme.of(context).colorScheme.primary),
               ),
               onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
             TextButton(
-              child: const Text(
+              child: Text(
                 'Create',
-                style: TextStyle(color: Colors.black),
+                style: AppStyles.labelLarge(
+                    color: Theme.of(context).colorScheme.primary),
               ),
               onPressed: () {
                 Navigator.of(context).pop(chatNameController.text);

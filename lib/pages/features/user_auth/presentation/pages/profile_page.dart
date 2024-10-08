@@ -1,15 +1,17 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:diplomovka/pages/features/app/global/toast.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
+import 'package:diplomovka/pages/features/app/global/toast.dart';
+import 'package:diplomovka/pages/features/app/providers/profile_provider.dart';
 
-class ProfilePage extends StatefulWidget {
+class ProfilePage extends ConsumerStatefulWidget {
   @override
   _ProfilePageState createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfilePageState extends ConsumerState<ProfilePage> {
   final User? user = FirebaseAuth.instance.currentUser;
   TextEditingController usernameController = TextEditingController();
   TextEditingController emailController = TextEditingController();
@@ -22,64 +24,23 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> fetchUserData() async {
-    if (user != null) {
-      try {
-        DocumentSnapshot userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user!.uid)
-            .get();
-
-        if (userDoc.exists) {
-          setState(() {
-            usernameController.text = userDoc.get('username');
-            emailController.text = user!.email!;
-          });
-        }
-      } catch (e) {
-        print("Error fetching user data: $e");
-        showToast(message: "Error fetching user data");
-      }
-    }
+    final userData = await ref.read(profileProvider.notifier).fetchUserData();
+    setState(() {
+      usernameController.text = userData['username'] ?? '';
+      emailController.text = userData['email'] ?? '';
+    });
   }
 
-  Future<void> updateUserProfile() async {
+  void updateUserProfile() {
     String newEmail = emailController.text;
     String newUsername = usernameController.text;
     String newPassword = passwordController.text;
 
-    try {
-      QuerySnapshot emailCheck = await FirebaseFirestore.instance
-          .collection('users')
-          .where('email', isEqualTo: newEmail)
-          .get();
-
-      if (emailCheck.docs.isNotEmpty && user!.email != newEmail) {
-        showToast(message: "Email already exists in the database.");
-        return;
-      }
-
-      if (newEmail != user!.email) {
-        await user!.updateEmail(newEmail);
-      }
-
-      if (newPassword.isNotEmpty) {
-        await user!.updatePassword(newPassword);
-      }
-
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user!.uid)
-          .update({
-        'username': newUsername,
-        'email': newEmail,
-      });
-
-      showToast(message: "Profile updated successfully");
-
-      Navigator.pop(context, newUsername);
-    } catch (e) {
-      showToast(message: "Error updating profile: $e");
-    }
+    ref.read(profileProvider.notifier).updateUserProfile(
+          newUsername: newUsername,
+          newEmail: newEmail,
+          newPassword: newPassword,
+        );
   }
 
   @override
@@ -136,16 +97,18 @@ class _ProfilePageState extends State<ProfilePage> {
                 TextField(
                   controller: usernameController,
                   decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.white70,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding:
-                        EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                    hintText: "Enter your username",
-                  ),
+                      filled: true,
+                      fillColor: Theme.of(context).primaryColor,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding:
+                          EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      hintText: "Enter your username",
+                      hintStyle: AppStyles.labelLarge(color: Colors.black54)),
+                  style: AppStyles.labelLarge(
+                      color: Theme.of(context).colorScheme.secondary),
                 ),
                 const SizedBox(height: 24),
 
@@ -159,7 +122,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   controller: emailController,
                   decoration: InputDecoration(
                     filled: true,
-                    fillColor: Colors.white70,
+                    fillColor:
+                        Theme.of(context).primaryColor, // Apply primary color
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -167,7 +131,13 @@ class _ProfilePageState extends State<ProfilePage> {
                     contentPadding:
                         EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                     hintText: "Enter your email",
+                    hintStyle: AppStyles.labelLarge(
+                        color: Colors.black54), // Set hint style
                   ),
+                  style: AppStyles.labelLarge(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .secondary), // Set text style
                 ),
                 const SizedBox(height: 24),
 
@@ -182,7 +152,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   obscureText: true,
                   decoration: InputDecoration(
                     filled: true,
-                    fillColor: Colors.white70,
+                    fillColor:
+                        Theme.of(context).primaryColor, // Apply primary color
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -190,8 +161,15 @@ class _ProfilePageState extends State<ProfilePage> {
                     contentPadding:
                         EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                     hintText: "Enter a new password",
+                    hintStyle: AppStyles.labelLarge(
+                        color: Colors.black54), // Set hint style
                   ),
+                  style: AppStyles.labelLarge(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .secondary), // Set text style
                 ),
+
                 const SizedBox(height: 40),
 
                 // Update Profile Button

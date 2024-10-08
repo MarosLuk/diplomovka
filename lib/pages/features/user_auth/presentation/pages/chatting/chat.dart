@@ -18,14 +18,12 @@ class ChatPage extends ConsumerStatefulWidget {
 class _ChatPageState extends ConsumerState<ChatPage> {
   bool _isEditingName = false;
   TextEditingController _chatNameController = TextEditingController();
-  TextEditingController _inviteEmailController = TextEditingController();
   TextEditingController messageController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
 
-    // Try to fetch the chat model for the given chatId
     final chatModel = ref.read(chatProvider).firstWhere(
         (chat) => chat.chatId == widget.chatId,
         orElse: () => ChatModel(
@@ -44,20 +42,17 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   @override
   void dispose() {
     _chatNameController.dispose();
-    _inviteEmailController.dispose();
     messageController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Fetch chat model from provider
     final chatModel = ref.watch(chatProvider).firstWhere(
         (chat) => chat.chatId == widget.chatId,
         orElse: () => ChatModel(
             chatId: widget.chatId, chatName: 'Unknown', messages: []));
 
-    // If chat does not exist, return a fallback UI
     if (chatModel == null) {
       return Scaffold(
         appBar: AppBar(
@@ -105,7 +100,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
           IconButton(
             icon: Icon(Icons.person_add, color: Theme.of(context).primaryColor),
             onPressed: () {
-              _promptForInviteEmail(context, chatModel.chatName);
+              ref.read(chatProvider.notifier).promptForInviteEmail(
+                  context, widget.chatId, chatModel.chatName);
             },
           ),
         ],
@@ -137,6 +133,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   padding: const EdgeInsets.all(16),
                   itemCount: chatModel.messages.length,
                   itemBuilder: (context, index) {
+                    final message = chatModel.messages[index];
+                    final senderEmail = message['senderEmail'] ??
+                        'Unknown'; // Get sender's email
+
                     return Align(
                       alignment: Alignment.centerLeft,
                       child: Container(
@@ -146,11 +146,23 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                           color: Colors.black45,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Text(
-                          chatModel.messages[index],
-                          style: AppStyles.titleSmall(
-                            color: Theme.of(context).primaryColor,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              senderEmail,
+                              style: AppStyles.titleSmall(
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              message['message'], // Display the message text
+                              style: AppStyles.titleSmall(
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     );
@@ -184,10 +196,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                         color: Theme.of(context).primaryColor,
                       ),
                       onPressed: () {
+                        print("Send button clicked");
                         ref
                             .read(chatProvider.notifier)
                             .sendMessage(widget.chatId, messageController.text);
+                        print("Message send function called");
                         messageController.clear();
+                        print("Message controller cleared");
                       },
                     ),
                   ],
@@ -198,59 +213,5 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         ),
       ),
     );
-  }
-
-  // Invite email prompt dialog
-  Future<void> _promptForInviteEmail(
-      BuildContext context, String chatName) async {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Invite user by email"),
-          content: TextField(
-            controller: _inviteEmailController,
-            decoration: const InputDecoration(hintText: "Email"),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text(
-                "Cancel",
-                style: TextStyle(color: Colors.black45),
-              ),
-            ),
-            TextButton(
-              onPressed: () async {
-                await _sendInvite(_inviteEmailController.text, chatName);
-                Navigator.of(context).pop();
-              },
-              child: const Text(
-                "Send Invite",
-                style: TextStyle(color: Colors.black45),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // Sending invitation logic
-  Future<void> _sendInvite(String email, String chatName) async {
-    final FirebaseAuth auth = FirebaseAuth.instance;
-
-    // Send the invite with the current chat name
-    await FirebaseFirestore.instance.collection('invites').add({
-      'chatId': widget.chatId,
-      'invitedEmail': email,
-      'invitedBy': auth.currentUser!.email,
-      'timestamp': FieldValue.serverTimestamp(),
-      'chatName': chatName, // Include the chat name in the invite
-    });
-
-    showToast(message: "Invite sent to $email");
   }
 }
