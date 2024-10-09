@@ -57,7 +57,8 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
     fetchChats(userId, userEmail);
   }
 
-  Future<bool> sendInvite(String chatId, String email, String chatName) async {
+  Future<bool> sendInvite(BuildContext context, String chatId, String email,
+      String chatName) async {
     try {
       // Check if the user with the provided email exists
       final QuerySnapshot userSnapshot = await FirebaseFirestore.instance
@@ -67,7 +68,23 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
 
       if (userSnapshot.docs.isEmpty) {
         print("No user found with email $email");
+        await _showDialog(context, "Error", "No user found with this email.");
         return false; // Email not found
+      }
+
+      // Check if an invite for the user and chat already exists
+      final QuerySnapshot existingInvite = await FirebaseFirestore.instance
+          .collection('invites')
+          .where('chatId', isEqualTo: chatId)
+          .where('invitedEmail', isEqualTo: email)
+          .get();
+
+      if (existingInvite.docs.isNotEmpty) {
+        // Invite already exists, show error dialog
+        print("Invite already sent to $email for this chat.");
+        await _showDialog(context, "Error",
+            "Invite already sent to this user for this chat.");
+        return false;
       }
 
       // Send the invite with the current chat name if the email exists
@@ -80,11 +97,44 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
       });
 
       print("Invite sent to $email");
+      await _showDialog(
+          context, "Invite Sent", "The invite was successfully sent to $email");
       return true; // Invite sent successfully
     } catch (e) {
       print("Error sending invite: $e");
+      await _showDialog(
+          context, "Error", "Failed to send invite. Please try again.");
       return false; // Some error occurred
     }
+  }
+
+// Function to show dialog (success or error)
+  Future<void> _showDialog(
+      BuildContext context, String title, String message) async {
+    return showDialog<void>(
+      context: context, // Replace with your navigator context if necessary
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text(message),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   // Prompt for invite email - moved from ChatPage
@@ -127,7 +177,7 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
                 try {
                   // Try sending the invite
                   await sendInvite(
-                      chatId, _inviteEmailController.text, chatName);
+                      context, chatId, _inviteEmailController.text, chatName);
 
                   // Show success dialog after the invite has been sent
                   await showDialog(

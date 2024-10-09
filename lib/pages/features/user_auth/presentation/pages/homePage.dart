@@ -102,6 +102,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         ],
       ),
       drawer: Drawer(
+        backgroundColor: Colors.white70,
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
