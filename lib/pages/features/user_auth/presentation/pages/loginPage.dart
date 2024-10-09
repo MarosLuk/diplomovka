@@ -4,6 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:diplomovka/pages/features/user_auth/firebase_auth_implementation/firebase_auth_services.dart';
 import 'package:diplomovka/pages/features/app/global/toast.dart';
+import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -99,7 +100,8 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       Text(
                         'Remember me',
-                        style: TextStyle(color: Colors.white),
+                        style: AppStyles.labelSmall(
+                            color: Theme.of(context).primaryColor),
                       ),
                     ],
                   ),
@@ -107,7 +109,8 @@ class _LoginPageState extends State<LoginPage> {
                     onPressed: () {},
                     child: Text(
                       'Forgot Password?',
-                      style: TextStyle(color: Colors.white),
+                      style: AppStyles.labelSmall(
+                          color: Theme.of(context).primaryColor),
                     ),
                   ),
                 ],
@@ -129,11 +132,8 @@ class _LoginPageState extends State<LoginPage> {
                         ? CircularProgressIndicator(color: Colors.white)
                         : Text(
                             "Login",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                            ),
+                            style: AppStyles.titleMedium(
+                                color: Theme.of(context).primaryColor),
                           ),
                   ),
                 ),
@@ -144,7 +144,8 @@ class _LoginPageState extends State<LoginPage> {
                 children: [
                   Text(
                     "Don't have an account?",
-                    style: TextStyle(color: Colors.white),
+                    style: AppStyles.labelSmall(
+                        color: Theme.of(context).primaryColor),
                   ),
                   SizedBox(width: 5),
                   GestureDetector(
@@ -153,10 +154,7 @@ class _LoginPageState extends State<LoginPage> {
                     },
                     child: Text(
                       "Sign Up",
-                      style: TextStyle(
-                        color: Colors.purpleAccent,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: AppStyles.titleMedium(color: Colors.pinkAccent),
                     ),
                   ),
                 ],

@@ -19,6 +19,9 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   bool _isEditingName = false;
   TextEditingController _chatNameController = TextEditingController();
   TextEditingController messageController = TextEditingController();
+  ScrollController _scrollController = ScrollController();
+  String currentUserEmail = FirebaseAuth.instance.currentUser?.email ?? "";
+  bool _shouldScrollToBottom = true; // Flag to manage scroll behavior
 
   @override
   void initState() {
@@ -37,12 +40,39 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         Navigator.pop(context);
       });
     }
+
+    // Scroll to bottom when chat is opened
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToBottom();
+    });
+
+    _scrollController.addListener(_onScroll);
+  }
+
+  // Handle scroll events
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 50) {
+      _shouldScrollToBottom = true; // If user is near the bottom
+    } else {
+      _shouldScrollToBottom = false; // If user is scrolling up
+    }
+  }
+
+  // Instantly scroll to the bottom of the ListView
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      }
+    });
   }
 
   @override
   void dispose() {
     _chatNameController.dispose();
     messageController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -52,6 +82,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         (chat) => chat.chatId == widget.chatId,
         orElse: () => ChatModel(
             chatId: widget.chatId, chatName: 'Unknown', messages: []));
+
+    // Scroll to bottom if new message arrives and user is already at the bottom
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_shouldScrollToBottom) {
+        _scrollToBottom();
+      }
+    });
 
     if (chatModel == null) {
       return Scaffold(
@@ -109,7 +146,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       ),
       body: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [Colors.deepPurple[600]!, Colors.deepPurple[900]!],
@@ -130,48 +167,62 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             children: [
               Expanded(
                 child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
+                  controller: _scrollController,
                   itemCount: chatModel.messages.length,
                   itemBuilder: (context, index) {
                     final message = chatModel.messages[index];
-                    final senderEmail = message['senderEmail'] ??
-                        'Unknown'; // Get sender's email
+                    final senderUsername = message['username'] ?? 'Unknown';
+                    final isCurrentUser =
+                        message['senderEmail'] == currentUserEmail;
+
+                    // Create a unique key based on message content and timestamp
+                    final messageKey = UniqueKey();
 
                     return Align(
-                      alignment: Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.black45,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              senderEmail,
-                              style: AppStyles.titleSmall(
-                                color: Theme.of(context).primaryColor,
-                              ),
+                      key: messageKey, // Ensure unique key for each message
+                      alignment: isCurrentUser
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
+                      child: Column(
+                        children: [
+                          Text(
+                            senderUsername, // Display the username
+                            style: AppStyles.labelSmall(
+                              color: Theme.of(context).primaryColor,
                             ),
-                            const SizedBox(height: 5),
-                            Text(
-                              message['message'], // Display the message text
-                              style: AppStyles.titleSmall(
-                                color: Theme.of(context).primaryColor,
-                              ),
+                          ),
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isCurrentUser
+                                  ? Colors.blue[400]
+                                  : Colors.black45,
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                          ],
-                        ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  message[
+                                      'message'], // Display the message text
+                                  style: AppStyles.titleSmall(
+                                    color: Theme.of(context).primaryColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   },
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.only(left: 12.0),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
                       child: TextField(
@@ -196,13 +247,10 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                         color: Theme.of(context).primaryColor,
                       ),
                       onPressed: () {
-                        print("Send button clicked");
                         ref
                             .read(chatProvider.notifier)
                             .sendMessage(widget.chatId, messageController.text);
-                        print("Message send function called");
                         messageController.clear();
-                        print("Message controller cleared");
                       },
                     ),
                   ],

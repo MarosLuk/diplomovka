@@ -58,7 +58,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "Welcome, $username",
+          "HELPIE",
           style: AppStyles.headLineMedium(
             color: Theme.of(context).primaryColor,
           ),

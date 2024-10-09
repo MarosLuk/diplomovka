@@ -25,6 +25,7 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
   }
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final Map<String, String> _usernameCache = {}; // Cache for username
 
   // Create a new chat, directly reflecting in Firestore without any offline checks
   Future<String> createNewChat(String chatName, String userId) async {
@@ -193,58 +194,97 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
   // Fetch both user's own chats and chats where the user is a participant
   Future<void> fetchChats(String userId, String userEmail) async {
     try {
-      // Fetch chats created by the user
       final userChatsSnapshot = await _firestore
           .collection('chats')
           .where('userId', isEqualTo: userId)
           .get();
 
-      // Fetch chats where the user is a participant
       final participantChatsSnapshot = await _firestore
           .collection('chats')
           .where('participants', arrayContains: userEmail)
           .get();
 
-      // Combine both sets of chats
       final combinedDocs = [
         ...userChatsSnapshot.docs,
         ...participantChatsSnapshot.docs
       ];
 
-      final chats = combinedDocs.map((doc) {
+      final chats = await Future.wait(combinedDocs.map((doc) async {
         final data = doc.data();
+
+        // Fetch usernames for all messages
+        final messages = await Future.wait(
+            List<Map<String, dynamic>>.from(data['messages'] ?? [])
+                .map((msg) async {
+          final username = await _getUsername(msg['senderId']);
+          return {
+            'message': msg['message'],
+            'senderId': msg['senderId'],
+            'senderEmail': msg['senderEmail'],
+            'username': username, // Add username to message data
+          };
+        }).toList());
+
         return ChatModel(
           chatId: doc.id,
           chatName: data['chatName'],
-          messages: List<Map<String, dynamic>>.from(data['messages'] ?? []),
+          messages: messages,
         );
-      }).toList();
+      }).toList());
 
-      // Update state with the fetched chats
       state = chats;
     } catch (e) {
       print("Error fetching chats: $e");
     }
   }
 
+  Future<String> _getUsername(String userId) async {
+    // Check if the username is already in cache
+    if (_usernameCache.containsKey(userId)) {
+      return _usernameCache[userId]!;
+    }
+
+    // If not, fetch the username from Firestore
+    final userDoc = await _firestore.collection('users').doc(userId).get();
+    if (userDoc.exists) {
+      final username = userDoc.data()?['username'] ?? 'Unknown';
+      _usernameCache[userId] = username; // Cache the username
+      return username;
+    } else {
+      return 'Unknown';
+    }
+  }
+
   Future<void> sendMessage(String chatId, String message) async {
     try {
-      final userId =
-          FirebaseAuth.instance.currentUser!.uid; // Get sender's user ID
-      final senderEmail =
-          FirebaseAuth.instance.currentUser!.email; // Get sender's email
+      final userId = FirebaseAuth.instance.currentUser!.uid;
+      final senderEmail = FirebaseAuth.instance.currentUser!.email;
+
+      // Manually create a timestamp using DateTime.now(), which will be local
+      final timestamp = DateTime.now();
 
       final newMessage = {
         'message': message,
         'senderId': userId,
         'senderEmail': senderEmail,
+        'timestamp': timestamp
+            .toIso8601String(), // Convert timestamp to ISO8601 string format
       };
 
       print("Attempting to send message: $newMessage");
 
-      // Directly update the chat document using arrayUnion to add the message
-      await FirebaseFirestore.instance.collection('chats').doc(chatId).update({
-        'messages': FieldValue.arrayUnion([newMessage]),
+      // Fetch the current messages and update the array manually
+      final chatDocRef = _firestore.collection('chats').doc(chatId);
+      await _firestore.runTransaction((transaction) async {
+        final snapshot = await transaction.get(chatDocRef);
+        if (!snapshot.exists) {
+          throw Exception("Chat does not exist");
+        }
+
+        List<dynamic> messages = snapshot.get('messages') ?? [];
+        messages.add(newMessage); // Add the new message to the list
+
+        transaction.update(chatDocRef, {'messages': messages});
       });
 
       print("Message sent successfully");
