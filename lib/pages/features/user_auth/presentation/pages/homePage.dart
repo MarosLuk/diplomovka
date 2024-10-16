@@ -10,6 +10,8 @@ import 'package:diplomovka/pages/features/user_auth/presentation/pages/chatting/
 import 'package:diplomovka/pages/features/app/providers/chat_provider.dart';
 import 'package:diplomovka/pages/features/app/providers/invitation_provider.dart';
 import 'dart:async';
+import 'package:diplomovka/pages/features/app/providers/problem_provider.dart';
+import 'package:diplomovka/pages/features/user_auth/presentation/pages/chatting/problemPage.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -22,21 +24,54 @@ class _HomePageState extends ConsumerState<HomePage> {
   User? user = FirebaseAuth.instance.currentUser;
   Timer? _timer;
 
+  Future<bool?> showInviteDialog(BuildContext context, String problemName) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Invitation'),
+          content: Text(
+              'You have been invited to the problem "$problemName". Do you accept the invitation?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false), // Decline
+              child: Text(
+                'Decline',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true), // Accept
+              child: Text(
+                'Accept',
+                style: TextStyle(color: Colors.green),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   void initState() {
     super.initState();
     if (user != null) {
-      // Initial fetch
+      print("User: $user");
 
-      ref.read(chatProvider.notifier).fetchChats(user!.uid, user!.email!);
+      // Add these prints for debugging
+      print("About to call fetchProblems");
+      ref.read(problemProvider.notifier).fetchProblems(user!.uid, user!.email!);
 
-      // Fetch invites
+      print("About to call fetchInvites");
       ref.read(inviteProvider.notifier).fetchInvites(user!.email!);
 
-      // Set up periodic fetch every 2 seconds
       _timer = Timer.periodic(Duration(seconds: 2), (timer) {
         if (user != null) {
-          ref.read(chatProvider.notifier).fetchChats(user!.uid, user!.email!);
+          print("Timer triggered: Fetching problems and invites");
+          ref
+              .read(problemProvider.notifier)
+              .fetchProblems(user!.uid, user!.email!);
           ref.read(inviteProvider.notifier).fetchInvites(user!.email!);
         }
       });
@@ -52,7 +87,8 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   Widget build(BuildContext context) {
     final username = ref.watch(usernameProvider);
-    final chats = ref.watch(chatProvider);
+    final problems =
+        ref.watch(problemProvider); // Watch problems instead of chats
     final invites = ref.watch(inviteProvider);
 
     return Scaffold(
@@ -78,22 +114,24 @@ class _HomePageState extends ConsumerState<HomePage> {
         actions: [
           IconButton(
             icon: Icon(
-              Icons.chat_bubble_outline,
+              Icons.add_circle_outline,
               color: Theme.of(context).primaryColor,
             ),
             onPressed: () async {
-              String? chatName = await ref
-                  .read(inviteProvider.notifier)
-                  .promptForChatName(context);
-              if (chatName != null && chatName.isNotEmpty && user != null) {
-                String chatId = await ref
-                    .read(chatProvider.notifier)
-                    .createNewChat(chatName, user!.uid);
+              String? problemName = await ref
+                  .read(problemProvider.notifier)
+                  .promptForProblemName(context);
+              if (problemName != null &&
+                  problemName.isNotEmpty &&
+                  user != null) {
+                String problemId = await ref
+                    .read(problemProvider.notifier)
+                    .createNewProblem(problemName, user!.uid);
 
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ChatPage(chatId: chatId),
+                    builder: (context) => ProblemPage(problemId: problemId),
                   ),
                 );
               }
@@ -141,25 +179,25 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             ExpansionTile(
               leading: Icon(
-                Icons.chat,
+                Icons.assignment,
                 color: Theme.of(context).colorScheme.secondary,
               ),
               title: Text(
-                'Chats',
+                'Problems',
                 style: AppStyles.labelMedium(
                   color: Theme.of(context).colorScheme.secondary,
                 ),
               ),
               iconColor: Theme.of(context).colorScheme.secondary,
               collapsedIconColor: Theme.of(context).colorScheme.secondary,
-              children: chats.map((chat) {
+              children: problems.map((problem) {
                 return ListTile(
                   title: Padding(
                     padding: const EdgeInsets.only(left: 8.0),
                     child: Column(
                       children: [
                         Text(
-                          chat.chatName,
+                          problem.problemName,
                           style: AppStyles.labelLarge(color: Colors.black45),
                         )
                       ],
@@ -169,7 +207,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ChatPage(chatId: chat.chatId),
+                        builder: (context) =>
+                            ProblemPage(problemId: problem.problemId),
                       ),
                     );
                   },
@@ -186,40 +225,46 @@ class _HomePageState extends ConsumerState<HomePage> {
               collapsedIconColor: Theme.of(context).colorScheme.secondary,
               children: invites.map((invite) {
                 return ListTile(
-                  title: Column(
-                    children: [
-                      Text(
-                        "${invite['chatName']}",
-                        style: AppStyles.labelLarge(color: Colors.black45),
-                      ),
-                      Text(
-                        "(invited by ${invite['invitedBy']})",
-                        style: AppStyles.labelSmall(color: Colors.black45),
-                      ),
-                    ],
+                  title: Text(
+                    invite['problemName'] ??
+                        'Unnamed Problem', // Handle null problemName
+                    style: AppStyles.labelLarge(color: Colors.black45),
+                  ),
+                  subtitle: Text(
+                    "(invited by ${invite['invitedBy'] ?? 'Unknown'})", // Handle null invitedBy
+                    style: AppStyles.labelSmall(color: Colors.black45),
                   ),
                   onTap: () async {
-                    // Show popup for accepting or declining the invite
-                    bool accepted = await ref
-                        .read(inviteProvider.notifier)
-                        .showInvitePopup(context, invite['chatName']);
-                    if (accepted) {
-                      // Accept the invite and add user to the chat
+                    // Display the prompt for accepting or declining the invite
+                    bool? accepted =
+                        await showInviteDialog(context, invite['problemName']);
+
+                    if (accepted == true) {
+                      // If the user accepted the invite, add the problem to their list
                       await ref.read(inviteProvider.notifier).acceptInvite(
-                          invite['inviteId'], invite['chatId'], user!.email!);
+                          invite['inviteId'],
+                          invite['problemId'],
+                          user!.email!);
+                      showToast(message: "Invitation accepted.");
 
-                      // After accepting, fetch updated list of chats
+                      // After accepting, fetch updated problems and navigate to the problem page
                       await ref
-                          .read(chatProvider.notifier)
-                          .fetchChats(user!.uid, user!.email!);
+                          .read(problemProvider.notifier)
+                          .fetchProblems(user!.uid, user!.email!);
 
-                      // Navigate to the chat page
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) =>
-                                ChatPage(chatId: invite['chatId'])),
+                          builder: (context) =>
+                              ProblemPage(problemId: invite['problemId']),
+                        ),
                       );
+                    } else if (accepted == false) {
+                      // If the user declined the invite, delete the invitation
+                      await ref
+                          .read(inviteProvider.notifier)
+                          .deleteInvite(invite['inviteId']);
+                      showToast(message: "Invitation declined.");
                     }
                   },
                 );
@@ -244,7 +289,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     color: Theme.of(context).colorScheme.secondary),
               ),
               onTap: () async {
-                ref.read(chatProvider.notifier).clearState();
+                ref.read(problemProvider.notifier).clearState();
                 ref.read(inviteProvider.notifier).clearState();
                 ref.read(usernameProvider.notifier).clearState();
 

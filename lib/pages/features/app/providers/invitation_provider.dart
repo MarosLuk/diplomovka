@@ -1,151 +1,93 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
 
 class InviteNotifier extends StateNotifier<List<Map<String, dynamic>>> {
-  InviteNotifier() : super([]);
+  InviteNotifier() : super([]) {
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: false,
+    );
+  }
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Fetch invites for the logged-in user
-  Future<void> fetchInvites(String userEmail) async {
-    final inviteSnapshot = await _firestore
-        .collection('invites')
-        .where('invitedEmail', isEqualTo: userEmail)
-        .get();
-
-    state = inviteSnapshot.docs.map((doc) {
-      final data = doc.data();
-      return {
-        'inviteId': doc.id, // Store the invite document ID
-        'chatId': data['chatId'],
-        'chatName': data['chatName'],
-        'invitedBy': data['invitedBy'],
-      };
-    }).toList();
-  }
-
-  // Accept invite, add user to chat, and mark invitation as resolved
   Future<void> acceptInvite(
-      String inviteId, String chatId, String userId) async {
-    final WriteBatch batch = _firestore.batch();
+      String inviteId, String problemId, String userEmail) async {
+    try {
+      // Instead of using userEmail as document id, perform a query to find the user by email
+      final userSnapshot = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: userEmail)
+          .get();
 
-    // Add the user as a participant in the chat
-    batch.update(_firestore.collection('chats').doc(chatId), {
-      'participants': FieldValue.arrayUnion([userId]),
-    });
+      if (userSnapshot.docs.isNotEmpty) {
+        // Get the first user document
+        final userDoc = userSnapshot.docs.first;
 
-    // Mark the invite as resolved (you can also choose to delete it)
-    batch.update(_firestore.collection('invites').doc(inviteId), {
-      'resolved': true,
-    });
+        // Add the problemId to the user's 'problems' array
+        await _firestore.collection('users').doc(userDoc.id).update({
+          'problems': FieldValue.arrayUnion([problemId]),
+        });
 
-    // Commit batch
-    await batch.commit();
+        print("User found and problem added to user's list.");
+      } else {
+        print("User not found with email: $userEmail");
+        throw Exception("User does not exist");
+      }
 
-    // Refresh the invites list after accepting
-    await fetchInvites(userId);
+      // Delete the invite after it has been accepted
+      await _firestore.collection('invites').doc(inviteId).delete();
+      print("Invitation accepted and invite deleted.");
+    } catch (e) {
+      print("Error accepting invite: $e");
+      throw e;
+    }
   }
 
-  // Function to clear state (useful when logging out)
+  // Method to delete an invite (used when declined)
+  Future<void> deleteInvite(String inviteId) async {
+    try {
+      await _firestore.collection('invites').doc(inviteId).delete();
+      print("Invite deleted.");
+    } catch (e) {
+      print("Error deleting invite: $e");
+    }
+  }
+
+  Future<void> fetchInvites(String userEmail) async {
+    try {
+      print("Fetching invites for email: $userEmail");
+
+      final inviteSnapshot = await _firestore
+          .collection('invites')
+          .where('invitedEmail', isEqualTo: userEmail)
+          .get();
+
+      if (inviteSnapshot.docs.isEmpty) {
+        print("No invites found for $userEmail");
+      }
+
+      final invites = inviteSnapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return {
+          'inviteId': doc.id,
+          'problemId': data['problemId'] ?? 'Unknown Problem ID',
+          'problemName': data['problemName'] ?? 'Unnamed Problem',
+          'invitedBy': data['invitedBy'] ?? 'Unknown',
+        };
+      }).toList();
+
+      print("Invites fetched: ${invites.length}");
+      state = invites;
+    } catch (e) {
+      print("Error fetching invites: $e");
+    }
+  }
+
   void clearState() {
     state = [];
   }
-
-  // Function to show popup for accepting or declining invite
-  Future<bool> showInvitePopup(BuildContext context, String chatName) async {
-    return await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: Colors.deepPurple[600],
-            title: Text(
-              'Invitation to: $chatName',
-              style: AppStyles.headLineMedium(
-                  color: Theme.of(context).colorScheme.primary),
-            ),
-            content: Text(
-              'Do you want to accept this invitation?',
-              style: AppStyles.labelMedium(
-                  color: Theme.of(context).colorScheme.primary),
-            ),
-            actions: [
-              TextButton(
-                child: Text(
-                  'Decline',
-                  style: AppStyles.headLineSmall(
-                      color: Theme.of(context).colorScheme.secondary),
-                ),
-                onPressed: () {
-                  Navigator.pop(context, false); // Decline invite
-                },
-              ),
-              TextButton(
-                child: Text(
-                  'Accept',
-                  style: AppStyles.headLineSmall(
-                      color: Theme.of(context).colorScheme.primary),
-                ),
-                onPressed: () {
-                  Navigator.pop(context, true); // Accept invite
-                },
-              ),
-            ],
-          ),
-        ) ??
-        false; // Return false if dialog is dismissed
-  }
-
-  // Function to show a prompt for creating a new chat name
-  Future<String?> promptForChatName(BuildContext context) async {
-    TextEditingController chatNameController = TextEditingController();
-    return await showDialog<String>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Colors.deepPurple[600],
-          title: Text('Enter chat name',
-              style: AppStyles.titleMedium(
-                  color: Theme.of(context).colorScheme.primary)),
-          content: TextField(
-            controller: chatNameController,
-            decoration: InputDecoration(
-                hintText: "Chat name",
-                hintStyle: AppStyles.labelLarge(color: Colors.black54)),
-            cursorColor: Theme.of(context).colorScheme.primary,
-            style: AppStyles.labelLarge(
-                color: Theme.of(context).colorScheme.primary),
-          ),
-          actions: [
-            TextButton(
-              child: Text(
-                'Cancel',
-                style: AppStyles.labelLarge(
-                    color: Theme.of(context).colorScheme.primary),
-              ),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: Text(
-                'Create',
-                style: AppStyles.labelLarge(
-                    color: Theme.of(context).colorScheme.primary),
-              ),
-              onPressed: () {
-                Navigator.of(context).pop(chatNameController.text);
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
 }
 
-// Provider for managing state of the InviteNotifier
 final inviteProvider =
     StateNotifierProvider<InviteNotifier, List<Map<String, dynamic>>>(
   (ref) => InviteNotifier(),
