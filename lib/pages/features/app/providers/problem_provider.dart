@@ -3,17 +3,19 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 import 'package:diplomovka/pages/features/app/providers/invitation_provider.dart';
+import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
 
 class ProblemModel {
   String problemId;
   String problemName;
   List<ContainerModel> containers;
+  List<String> collaborators;
 
-  ProblemModel({
-    required this.problemId,
-    required this.problemName,
-    required this.containers,
-  });
+  ProblemModel(
+      {required this.problemId,
+      required this.problemName,
+      required this.containers,
+      required this.collaborators});
 }
 
 class ContainerModel {
@@ -40,7 +42,7 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
   Future<void> sendInvite(
       String problemId, String email, String problemName) async {
     try {
-      // Check if the user with the provided email exists
+
       final QuerySnapshot userSnapshot = await _firestore
           .collection('users')
           .where('email', isEqualTo: email)
@@ -51,16 +53,14 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
         throw Exception("No user found with this email.");
       }
 
-      // Ensure that problemName is not null
       final validProblemName =
           problemName.isNotEmpty ? problemName : "Unnamed Problem";
 
-      // Send the invite with the current problem name if the email exists
       await _firestore.collection('invites').add({
         'problemId': problemId,
         'invitedEmail': email,
         'invitedBy': FirebaseAuth.instance.currentUser!.email,
-        'problemName': validProblemName, // Ensure a valid name is stored
+        'problemName': validProblemName,
       });
 
       print("Invite sent to $email");
@@ -72,7 +72,6 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
 
   Future<void> fetchProblems(String userId, String userEmail) async {
     try {
-      print("Fetching problems for userId: $userId, userEmail: $userEmail");
 
       final userProblemsSnapshot = await _firestore
           .collection('problems')
@@ -81,7 +80,7 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
 
       final participantProblemsSnapshot = await _firestore
           .collection('problems')
-          .where('participants', arrayContains: userEmail)
+          .where('collaborators', arrayContains: userEmail)
           .get();
 
       final combinedDocs = [
@@ -91,6 +90,7 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
 
       final problems = combinedDocs.map((doc) {
         final data = doc.data();
+
         final problemName = data['problemName'] ?? 'Unknown Problem';
         final containersData = (data['containers'] as List<dynamic>?) ?? [];
 
@@ -104,14 +104,16 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
           );
         }).toList();
 
+        final collaborators = List<String>.from(data['collaborators'] ?? []);
+
         return ProblemModel(
           problemId: doc.id,
           problemName: problemName,
           containers: containers,
+          collaborators: collaborators,
         );
       }).toList();
 
-      print("Problems fetched: ${problems.length}");
       state = problems;
     } catch (e) {
       print("Error fetching problems: $e");
@@ -123,14 +125,18 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
       'problemName': problemName,
       'userId': userId,
       'containers': [],
+      'collaborators': [],
     };
 
     final problemRef = await _firestore.collection('problems').add(newProblem);
+
     final newProblemModel = ProblemModel(
       problemId: problemRef.id,
       problemName: problemName,
       containers: [],
+      collaborators: [],
     );
+
     state = [...state, newProblemModel];
     return problemRef.id;
   }
@@ -142,10 +148,10 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: Colors.deepPurple[600],
+          backgroundColor: AppStyles.background(),
           title: Text(
             'Enter problem name',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: AppStyles.onBackground()),
           ),
           content: TextField(
             controller: problemNameController,
@@ -153,7 +159,7 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
               hintText: "Problem name",
               hintStyle: TextStyle(color: Colors.grey),
             ),
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: AppStyles.onBackground()),
           ),
           actions: <Widget>[
             TextButton(
@@ -182,22 +188,25 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
+          backgroundColor: AppStyles.background(),
           title: Text('Invite User by Email'),
           content: TextField(
             controller: inviteEmailController,
-            decoration: InputDecoration(hintText: "User email"),
+            decoration: InputDecoration(
+                hintText: "User email",
+                hintStyle: TextStyle(color: AppStyles.onBackground())),
           ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text('Cancel', style: TextStyle(color: Colors.red)),
+              child: Text('Cancel',
+                  style: TextStyle(color: AppStyles.onBackground())),
             ),
             TextButton(
               onPressed: () async {
                 try {
-                  // Call sendInvite method
                   await sendInvite(
                       problemId, inviteEmailController.text, problemName);
                   Navigator.of(context).pop();
@@ -205,7 +214,8 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
                   print("Error inviting user: $e");
                 }
               },
-              child: Text('Send Invite', style: TextStyle(color: Colors.green)),
+              child: Text('Send Invite',
+                  style: TextStyle(color: AppStyles.onBackground())),
             ),
           ],
         );

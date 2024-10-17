@@ -9,7 +9,6 @@ class ProfileNotifier extends StateNotifier<void> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final User? _user = FirebaseAuth.instance.currentUser;
 
-  // Fetch user data from Firestore
   Future<Map<String, String>> fetchUserData() async {
     try {
       if (_user != null) {
@@ -30,13 +29,11 @@ class ProfileNotifier extends StateNotifier<void> {
     return {};
   }
 
-  // Update user profile
   Future<void> updateUserProfile(
       {required String newUsername,
       required String newEmail,
       required String newPassword}) async {
     try {
-      // Check if email already exists
       QuerySnapshot emailCheck = await _firestore
           .collection('users')
           .where('email', isEqualTo: newEmail)
@@ -55,7 +52,6 @@ class ProfileNotifier extends StateNotifier<void> {
         await _user!.updatePassword(newPassword);
       }
 
-      // Update Firestore
       await _firestore.collection('users').doc(_user!.uid).update({
         'username': newUsername,
         'email': newEmail,
@@ -68,7 +64,6 @@ class ProfileNotifier extends StateNotifier<void> {
   }
 }
 
-// Provider for managing user profile data
 final profileProvider = StateNotifierProvider<ProfileNotifier, void>(
   (ref) => ProfileNotifier(),
 );

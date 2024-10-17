@@ -34,15 +34,15 @@ class _HomePageState extends ConsumerState<HomePage> {
               'You have been invited to the problem "$problemName". Do you accept the invitation?'),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false), // Decline
-              child: Text(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text(
                 'Decline',
                 style: TextStyle(color: Colors.red),
               ),
             ),
             TextButton(
-              onPressed: () => Navigator.of(context).pop(true), // Accept
-              child: Text(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text(
                 'Accept',
                 style: TextStyle(color: Colors.green),
               ),
@@ -57,18 +57,12 @@ class _HomePageState extends ConsumerState<HomePage> {
   void initState() {
     super.initState();
     if (user != null) {
-      print("User: $user");
-
-      // Add these prints for debugging
-      print("About to call fetchProblems");
       ref.read(problemProvider.notifier).fetchProblems(user!.uid, user!.email!);
 
-      print("About to call fetchInvites");
       ref.read(inviteProvider.notifier).fetchInvites(user!.email!);
 
       _timer = Timer.periodic(Duration(seconds: 2), (timer) {
         if (user != null) {
-          print("Timer triggered: Fetching problems and invites");
           ref
               .read(problemProvider.notifier)
               .fetchProblems(user!.uid, user!.email!);
@@ -80,15 +74,14 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   void dispose() {
-    _timer?.cancel(); // Cancel the timer when the widget is disposed
+    _timer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final username = ref.watch(usernameProvider);
-    final problems =
-        ref.watch(problemProvider); // Watch problems instead of chats
+    final problems = ref.watch(problemProvider);
     final invites = ref.watch(inviteProvider);
 
     return Scaffold(
@@ -140,7 +133,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         ],
       ),
       drawer: Drawer(
-        backgroundColor: Colors.white70,
+        backgroundColor: const Color.fromRGBO(26, 48, 121, 1.0),
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
@@ -156,11 +149,11 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             ListTile(
               leading: Icon(Icons.person,
-                  color: Theme.of(context).colorScheme.secondary),
+                  color: Theme.of(context).colorScheme.primary),
               title: Text(
                 'Profile',
                 style: AppStyles.labelMedium(
-                    color: Theme.of(context).colorScheme.secondary),
+                    color: Theme.of(context).colorScheme.primary),
               ),
               onTap: () async {
                 final updatedUsername = await Navigator.push(
@@ -180,16 +173,16 @@ class _HomePageState extends ConsumerState<HomePage> {
             ExpansionTile(
               leading: Icon(
                 Icons.assignment,
-                color: Theme.of(context).colorScheme.secondary,
+                color: Theme.of(context).colorScheme.primary,
               ),
               title: Text(
                 'Problems',
                 style: AppStyles.labelMedium(
-                  color: Theme.of(context).colorScheme.secondary,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
-              iconColor: Theme.of(context).colorScheme.secondary,
-              collapsedIconColor: Theme.of(context).colorScheme.secondary,
+              iconColor: Theme.of(context).colorScheme.primary,
+              collapsedIconColor: Theme.of(context).colorScheme.primary,
               children: problems.map((problem) {
                 return ListTile(
                   title: Padding(
@@ -198,7 +191,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                       children: [
                         Text(
                           problem.problemName,
-                          style: AppStyles.labelLarge(color: Colors.black45),
+                          style: AppStyles.labelLarge(
+                              color: Theme.of(context).colorScheme.primary),
                         )
                       ],
                     ),
@@ -217,37 +211,35 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             ExpansionTile(
               leading: Icon(Icons.mail,
-                  color: Theme.of(context).colorScheme.secondary),
+                  color: Theme.of(context).colorScheme.primary),
               title: Text('Invites',
                   style: AppStyles.labelMedium(
-                      color: Theme.of(context).colorScheme.secondary)),
-              iconColor: Theme.of(context).colorScheme.secondary,
-              collapsedIconColor: Theme.of(context).colorScheme.secondary,
+                      color: Theme.of(context).colorScheme.primary)),
+              iconColor: Theme.of(context).colorScheme.primary,
+              collapsedIconColor: Theme.of(context).colorScheme.primary,
               children: invites.map((invite) {
                 return ListTile(
                   title: Text(
-                    invite['problemName'] ??
-                        'Unnamed Problem', // Handle null problemName
-                    style: AppStyles.labelLarge(color: Colors.black45),
+                    invite['problemName'] ?? 'Unnamed Problem',
+                    style: AppStyles.labelLarge(
+                        color: Theme.of(context).colorScheme.primary),
                   ),
                   subtitle: Text(
-                    "(invited by ${invite['invitedBy'] ?? 'Unknown'})", // Handle null invitedBy
-                    style: AppStyles.labelSmall(color: Colors.black45),
+                    "(invited by ${invite['invitedBy'] ?? 'Unknown'})",
+                    style: AppStyles.labelSmall(
+                        color: Theme.of(context).colorScheme.primary),
                   ),
                   onTap: () async {
-                    // Display the prompt for accepting or declining the invite
                     bool? accepted =
                         await showInviteDialog(context, invite['problemName']);
 
                     if (accepted == true) {
-                      // If the user accepted the invite, add the problem to their list
                       await ref.read(inviteProvider.notifier).acceptInvite(
                           invite['inviteId'],
                           invite['problemId'],
                           user!.email!);
                       showToast(message: "Invitation accepted.");
 
-                      // After accepting, fetch updated problems and navigate to the problem page
                       await ref
                           .read(problemProvider.notifier)
                           .fetchProblems(user!.uid, user!.email!);
@@ -260,7 +252,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                         ),
                       );
                     } else if (accepted == false) {
-                      // If the user declined the invite, delete the invitation
                       await ref
                           .read(inviteProvider.notifier)
                           .deleteInvite(invite['inviteId']);
@@ -272,21 +263,21 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
             ListTile(
               leading: Icon(Icons.settings,
-                  color: Theme.of(context).colorScheme.secondary),
+                  color: Theme.of(context).colorScheme.primary),
               title: Text(
                 'Settings',
                 style: AppStyles.labelMedium(
-                    color: Theme.of(context).colorScheme.secondary),
+                    color: Theme.of(context).colorScheme.primary),
               ),
               onTap: () {},
             ),
             ListTile(
               leading: Icon(Icons.exit_to_app,
-                  color: Theme.of(context).colorScheme.secondary),
+                  color: Theme.of(context).colorScheme.primary),
               title: Text(
                 'Sign Out',
                 style: AppStyles.labelMedium(
-                    color: Theme.of(context).colorScheme.secondary),
+                    color: Theme.of(context).colorScheme.primary),
               ),
               onTap: () async {
                 ref.read(problemProvider.notifier).clearState();
@@ -308,12 +299,12 @@ class _HomePageState extends ConsumerState<HomePage> {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.deepPurple[600]!, Colors.deepPurple[900]!],
+              colors: [AppStyles.backgroundLight(), AppStyles.background()],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(20),
-            boxShadow: [
+            boxShadow: const [
               BoxShadow(
                 color: Colors.black26,
                 blurRadius: 10,
@@ -329,7 +320,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 style: AppStyles.headLineLarge(
                     color: Theme.of(context).primaryColor),
               ),
-              SizedBox(height: 30),
+              const SizedBox(height: 30),
             ],
           ),
         ),

@@ -30,17 +30,26 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
           orElse: () => ProblemModel(
               problemId: widget.problemId,
               problemName: 'Unknown',
-              containers: []),
+              containers: [],
+              collaborators: []),
         );
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(problem.problemName),
+        iconTheme: IconThemeData(
+          color: AppStyles.onBackground(),
+        ),
+        title: Text(
+          problem.problemName,
+          style: TextStyle(color: AppStyles.onBackground()),
+        ),
         actions: [
           IconButton(
-            icon: Icon(Icons.person_add),
+            icon: Icon(
+              Icons.person_add,
+              color: AppStyles.onBackground(),
+            ),
             onPressed: () {
-              // Call the promptForInviteEmail for inviting users to the problem
               ref.read(problemProvider.notifier).promptForInviteEmail(
                     context,
                     widget.problemId,
@@ -50,53 +59,85 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: problem.containers.length,
-              itemBuilder: (context, index) {
-                final container = problem.containers[index];
-                return ListTile(
-                  title: Text(container.containerName),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            ChatPage(chatId: container.containerId),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: ListView.builder(
+                  itemCount: problem.containers.length,
+                  itemBuilder: (context, index) {
+                    final container = problem.containers[index];
+                    return ListTile(
+                      title: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                              width: 2, color: AppStyles.onBackground()),
+                          borderRadius:
+                              const BorderRadius.all(Radius.circular(12)),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Text(
+                            container.containerName,
+                            style: TextStyle(color: AppStyles.onBackground()),
+                          ),
+                        ),
                       ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                ChatPage(chatId: container.containerId),
+                          ),
+                        );
+                      },
                     );
                   },
-                );
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _containerNameController,
-                    decoration: InputDecoration(hintText: 'Container name'),
-                  ),
                 ),
-                IconButton(
-                  icon: Icon(Icons.add),
-                  onPressed: () {
-                    // Add the container to the problem and trigger a UI rebuild
-                    ref.read(problemProvider.notifier).addContainerToProblem(
-                          widget.problemId,
-                          _containerNameController.text,
-                        );
-                    _containerNameController.clear();
-                  },
-                )
-              ],
-            ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: 12, bottom: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _containerNameController,
+                        decoration: InputDecoration(
+                            hintText: 'New container',
+                            hintStyle: TextStyle(
+                                color:
+                                    AppStyles.onBackground().withOpacity(0.4))),
+                        style: TextStyle(
+                          color: AppStyles.onBackground(),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        Icons.add,
+                        color: AppStyles.onBackground(),
+                      ),
+                      onPressed: () {
+                        ref
+                            .read(problemProvider.notifier)
+                            .addContainerToProblem(
+                              widget.problemId,
+                              _containerNameController.text,
+                            );
+                        _containerNameController.clear();
+                      },
+                    )
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

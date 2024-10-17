@@ -61,12 +61,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.deepPurple[600]!, Colors.deepPurple[900]!],
+            colors: [AppStyles.backgroundLight(), AppStyles.background()],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
+          boxShadow: const [
             BoxShadow(
               color: Colors.black26,
               blurRadius: 10,
@@ -83,13 +83,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 Center(
                   child: CircleAvatar(
                     radius: 50,
-                    backgroundColor: Colors.deepPurpleAccent.withOpacity(0.7),
-                    child: Icon(Icons.person, size: 50, color: Colors.white),
+                    backgroundColor: AppStyles.background().withOpacity(0.7),
+                    child: Icon(Icons.person,
+                        size: 50, color: AppStyles.onBackground()),
                   ),
                 ),
                 const SizedBox(height: 30),
-
-                // Username Field
                 Text("Username",
                     style: AppStyles.labelLarge(
                         color: Theme.of(context).primaryColor)),
@@ -103,15 +102,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
                       ),
-                      contentPadding:
-                          EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 14, horizontal: 16),
                       hintText: "Enter your username",
                       hintStyle: AppStyles.labelLarge(color: Colors.black54)),
                   style: AppStyles.labelLarge(
                       color: Theme.of(context).colorScheme.secondary),
                 ),
                 const SizedBox(height: 24),
-
                 Text(
                   "Email",
                   style: AppStyles.labelLarge(
@@ -122,25 +120,20 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   controller: emailController,
                   decoration: InputDecoration(
                     filled: true,
-                    fillColor:
-                        Theme.of(context).primaryColor, // Apply primary color
+                    fillColor: Theme.of(context).primaryColor,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
                     ),
-                    contentPadding:
-                        EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 14, horizontal: 16),
                     hintText: "Enter your email",
-                    hintStyle: AppStyles.labelLarge(
-                        color: Colors.black54), // Set hint style
+                    hintStyle: AppStyles.labelLarge(color: Colors.black54),
                   ),
                   style: AppStyles.labelLarge(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .secondary), // Set text style
+                      color: Theme.of(context).colorScheme.secondary),
                 ),
                 const SizedBox(height: 24),
-
                 Text(
                   "New Password",
                   style: AppStyles.labelLarge(
@@ -152,34 +145,27 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   obscureText: true,
                   decoration: InputDecoration(
                     filled: true,
-                    fillColor:
-                        Theme.of(context).primaryColor, // Apply primary color
+                    fillColor: Theme.of(context).primaryColor,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
                     ),
-                    contentPadding:
-                        EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 14, horizontal: 16),
                     hintText: "Enter a new password",
-                    hintStyle: AppStyles.labelLarge(
-                        color: Colors.black54), // Set hint style
+                    hintStyle: AppStyles.labelLarge(color: Colors.black54),
                   ),
                   style: AppStyles.labelLarge(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .secondary), // Set text style
+                      color: Theme.of(context).colorScheme.secondary),
                 ),
-
                 const SizedBox(height: 40),
-
-                // Update Profile Button
                 Center(
                   child: ElevatedButton(
                     onPressed: updateUserProfile,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurpleAccent,
-                      padding:
-                          EdgeInsets.symmetric(vertical: 14, horizontal: 60),
+                      backgroundColor: AppStyles.backgroundLight(),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 14, horizontal: 60),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),

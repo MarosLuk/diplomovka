@@ -13,37 +13,26 @@ class InviteNotifier extends StateNotifier<List<Map<String, dynamic>>> {
   Future<void> acceptInvite(
       String inviteId, String problemId, String userEmail) async {
     try {
-      // Instead of using userEmail as document id, perform a query to find the user by email
-      final userSnapshot = await _firestore
-          .collection('users')
-          .where('email', isEqualTo: userEmail)
-          .get();
+      final problemDoc =
+          await _firestore.collection('problems').doc(problemId).get();
 
-      if (userSnapshot.docs.isNotEmpty) {
-        // Get the first user document
-        final userDoc = userSnapshot.docs.first;
-
-        // Add the problemId to the user's 'problems' array
-        await _firestore.collection('users').doc(userDoc.id).update({
-          'problems': FieldValue.arrayUnion([problemId]),
+      if (problemDoc.exists) {
+        await _firestore.collection('problems').doc(problemId).update({
+          'collaborators': FieldValue.arrayUnion([userEmail]),
         });
 
-        print("User found and problem added to user's list.");
+        await _firestore.collection('invites').doc(inviteId).delete();
+        print(
+            "Invitation accepted, user added as collaborator, and invite deleted.");
       } else {
-        print("User not found with email: $userEmail");
-        throw Exception("User does not exist");
+        throw Exception("Problem does not exist");
       }
-
-      // Delete the invite after it has been accepted
-      await _firestore.collection('invites').doc(inviteId).delete();
-      print("Invitation accepted and invite deleted.");
     } catch (e) {
       print("Error accepting invite: $e");
       throw e;
     }
   }
 
-  // Method to delete an invite (used when declined)
   Future<void> deleteInvite(String inviteId) async {
     try {
       await _firestore.collection('invites').doc(inviteId).delete();
@@ -55,16 +44,10 @@ class InviteNotifier extends StateNotifier<List<Map<String, dynamic>>> {
 
   Future<void> fetchInvites(String userEmail) async {
     try {
-      print("Fetching invites for email: $userEmail");
-
       final inviteSnapshot = await _firestore
           .collection('invites')
           .where('invitedEmail', isEqualTo: userEmail)
           .get();
-
-      if (inviteSnapshot.docs.isEmpty) {
-        print("No invites found for $userEmail");
-      }
 
       final invites = inviteSnapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
@@ -76,7 +59,6 @@ class InviteNotifier extends StateNotifier<List<Map<String, dynamic>>> {
         };
       }).toList();
 
-      print("Invites fetched: ${invites.length}");
       state = invites;
     } catch (e) {
       print("Error fetching invites: $e");

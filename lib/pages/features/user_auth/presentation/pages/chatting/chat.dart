@@ -310,7 +310,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                     ),
                     child: Icon(
                       Icons.arrow_downward,
-                      color: Colors.white,
+                      color: AppStyles.onBackground(),
                     ),
                   ),
                 ),

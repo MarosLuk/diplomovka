@@ -1,18 +1,18 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // Import Riverpod
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/homePage.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/signUpPage.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/loginPage.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Import SharedPreferences
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
 import 'package:diplomovka/pages/features/app/global/toast.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(); // Initialize Firebase
+  await Firebase.initializeApp();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   runApp(const ProviderScope(child: MyApp()));
@@ -28,7 +28,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   bool _isDarkMode = false;
   bool _isFirebaseInitialized = false;
-  bool _isLoggedIn = false; // Track the user's login status
+  bool _isLoggedIn = false;
 
   @override
   void initState() {
@@ -36,10 +36,8 @@ class _MyAppState extends State<MyApp> {
     _initializeFirebase();
   }
 
-  // Check if the user selected "Remember me" and Firebase initialization
   Future<void> _initializeFirebase() async {
     try {
-      // Initialize Firebase and check for "Remember me"
       SharedPreferences prefs = await SharedPreferences.getInstance();
       bool rememberMe = prefs.getBool('rememberMe') ?? false;
       setState(() {
@@ -51,12 +49,6 @@ class _MyAppState extends State<MyApp> {
       print("Error initializing Firebase: $e");
       showToast(message: "Error initializing Firebase: $e");
     }
-  }
-
-  void _toggleTheme() {
-    setState(() {
-      _isDarkMode = !_isDarkMode;
-    });
   }
 
   @override
@@ -71,7 +63,6 @@ class _MyAppState extends State<MyApp> {
       );
     }
 
-    // If the user is already logged in, go directly to the HomePage
     return AnimatedTheme(
       data: _isDarkMode ? _darkTheme() : _lightTheme(),
       duration: const Duration(milliseconds: 300),
@@ -84,9 +75,7 @@ class _MyAppState extends State<MyApp> {
                 theme: _lightTheme(),
                 darkTheme: _darkTheme(),
                 themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
-                initialRoute: _isLoggedIn
-                    ? '/home'
-                    : '/', // Redirect to home if logged in
+                initialRoute: _isLoggedIn ? '/home' : '/',
                 routes: {
                   '/': (context) => const LoginPage(),
                   '/home': (context) => const HomePage(),
@@ -104,14 +93,14 @@ class _MyAppState extends State<MyApp> {
   ThemeData _lightTheme() {
     return ThemeData(
       brightness: Brightness.light,
-      primaryColor: Colors.white,
+      primaryColor: AppStyles.onBackground(),
       colorScheme: ColorScheme.fromSwatch().copyWith(
-        primary: Colors.white, // Primary color
-        secondary: Colors.deepPurple[900],
+        primary: AppStyles.onBackground(),
+        secondary: AppStyles.background(),
       ),
-      scaffoldBackgroundColor: Colors.deepPurple[900],
+      scaffoldBackgroundColor: AppStyles.background(),
       appBarTheme: AppBarTheme(
-        backgroundColor: Colors.deepPurple[900],
+        backgroundColor: AppStyles.background(),
         iconTheme: IconThemeData(color: AppStyles.onBackground()),
       ),
       textTheme: TextTheme(
@@ -129,7 +118,7 @@ class _MyAppState extends State<MyApp> {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.blue,
-          textStyle: AppStyles.labelLarge(color: Colors.white),
+          textStyle: AppStyles.labelLarge(color: AppStyles.onBackground()),
         ),
       ),
     );
@@ -139,9 +128,9 @@ class _MyAppState extends State<MyApp> {
     return ThemeData(
       brightness: Brightness.dark,
       primaryColor: Colors.black,
-      scaffoldBackgroundColor: AppStyles.BackgroundDark(),
+      scaffoldBackgroundColor: AppStyles.backgroundDark(),
       appBarTheme: AppBarTheme(
-        backgroundColor: AppStyles.BackgroundDark(),
+        backgroundColor: AppStyles.backgroundDark(),
         iconTheme: IconThemeData(color: AppStyles.whiteDark()),
       ),
       textTheme: TextTheme(

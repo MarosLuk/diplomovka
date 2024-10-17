@@ -8,10 +8,9 @@ final usernameProvider = StateNotifierProvider<UsernameNotifier, String>((ref) {
 
 class UsernameNotifier extends StateNotifier<String> {
   UsernameNotifier() : super('Anonymous') {
-    fetchUsername(); // Fetch the username when the app is initialized
+    fetchUsername();
   }
 
-  // Fetch the username from Firestore, always fetching from the server
   Future<void> fetchUsername() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -23,18 +22,17 @@ class UsernameNotifier extends StateNotifier<String> {
         if (userDoc.exists) {
           state = userDoc.get('username');
         } else {
-          state = 'Anonymous'; // Fallback if user document doesn't exist
+          state = 'Anonymous';
         }
       } catch (e) {
         print("Error fetching username: $e");
-        state = 'Anonymous'; // Fallback on error
+        state = 'Anonymous';
       }
     } else {
-      state = 'Anonymous'; // Reset state if no user is logged in
+      state = 'Anonymous';
     }
   }
 
-  // Update the username in Firestore and update the state
   Future<void> updateUsername(String newUsername) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -50,7 +48,6 @@ class UsernameNotifier extends StateNotifier<String> {
     }
   }
 
-  // Clear the state when logging out
   void clearState() {
     state = 'Anonymous';
   }

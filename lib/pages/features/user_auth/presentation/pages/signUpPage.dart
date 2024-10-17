@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/widgets/form_container_widget.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/loginPage.dart';
 import 'package:diplomovka/pages/features/app/global/toast.dart';
+import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -34,20 +35,19 @@ class _SignUpPageState extends State<SignUpPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.deepPurple[900],
       body: Center(
         child: Container(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
           width: MediaQuery.of(context).size.width * 0.9,
           height: MediaQuery.of(context).size.height * 0.65,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.deepPurple[600]!, Colors.deepPurple[900]!],
+              colors: [AppStyles.backgroundLight(), AppStyles.background()],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(20),
-            boxShadow: [
+            boxShadow: const [
               BoxShadow(
                 color: Colors.black26,
                 blurRadius: 10,
@@ -61,26 +61,26 @@ class _SignUpPageState extends State<SignUpPage> {
               Icon(
                 Icons.person_add,
                 size: 80,
-                color: Colors.white,
+                color: AppStyles.onBackground(),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               Text(
                 "Sign Up",
                 style: TextStyle(
                   fontSize: 27,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: AppStyles.onBackground(),
                 ),
               ),
-              SizedBox(height: 30),
+              const SizedBox(height: 30),
               _buildTextField(
                   _usernameController, 'Username', Icons.person, false),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               _buildTextField(_emailController, 'Email', Icons.email, false),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               _buildTextField(
                   _passwordController, 'Password', Icons.lock, true),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               GestureDetector(
                 onTap: () {
                   _signUp();
@@ -89,18 +89,18 @@ class _SignUpPageState extends State<SignUpPage> {
                   width: double.infinity,
                   height: 45,
                   decoration: BoxDecoration(
-                    color: Colors.purpleAccent,
+                    color: AppStyles.backgroundLight(),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Center(
                     child: isSigningUp
                         ? CircularProgressIndicator(
-                            color: Colors.white,
+                            color: AppStyles.onBackground(),
                           )
                         : Text(
                             "Sign up",
                             style: TextStyle(
-                              color: Colors.white,
+                              color: AppStyles.onBackground(),
                               fontWeight: FontWeight.bold,
                               fontSize: 18,
                             ),
@@ -108,25 +108,22 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     "Already have an account?",
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(color: AppStyles.onBackground()),
                   ),
-                  SizedBox(width: 5),
+                  const SizedBox(width: 5),
                   GestureDetector(
                     onTap: () {
                       Navigator.pushReplacementNamed(context, "/login");
                     },
                     child: Text(
                       "Login",
-                      style: TextStyle(
-                        color: Colors.purpleAccent,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: AppStyles.titleMedium(color: Colors.pinkAccent),
                     ),
                   ),
                 ],
@@ -143,13 +140,13 @@ class _SignUpPageState extends State<SignUpPage> {
     return TextField(
       controller: controller,
       obscureText: isPassword,
-      style: TextStyle(color: Colors.white),
+      style: TextStyle(color: AppStyles.onBackground()),
       decoration: InputDecoration(
         filled: true,
-        fillColor: Colors.white24,
-        prefixIcon: Icon(icon, color: Colors.white),
+        fillColor: AppStyles.background(),
+        prefixIcon: Icon(icon, color: AppStyles.onBackground()),
         hintText: hintText,
-        hintStyle: TextStyle(color: Colors.white60),
+        hintStyle: TextStyle(color: AppStyles.onBackground()),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide.none,

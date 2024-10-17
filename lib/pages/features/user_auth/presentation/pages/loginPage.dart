@@ -50,20 +50,19 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.deepPurple[900],
       body: Center(
         child: Container(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
           width: MediaQuery.of(context).size.width * 0.9,
           height: MediaQuery.of(context).size.height * 0.6,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.deepPurple[600]!, Colors.deepPurple[900]!],
+              colors: [AppStyles.backgroundLight(), AppStyles.background()],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(20),
-            boxShadow: [
+            boxShadow: const [
               BoxShadow(
                 color: Colors.black26,
                 blurRadius: 10,
@@ -77,20 +76,21 @@ class _LoginPageState extends State<LoginPage> {
               Icon(
                 Icons.person,
                 size: 80,
-                color: Colors.white,
+                color: AppStyles.onBackground(),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               _buildTextField(_emailController, 'Email', Icons.email, false),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               _buildTextField(
                   _passwordController, 'Password', Icons.lock, true),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
                       Checkbox(
+                        checkColor: Colors.pinkAccent,
                         value: _rememberMe,
                         onChanged: (bool? value) {
                           setState(() {
@@ -115,7 +115,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ],
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               GestureDetector(
                 onTap: () {
                   _signIn();
@@ -124,12 +124,13 @@ class _LoginPageState extends State<LoginPage> {
                   width: double.infinity,
                   height: 45,
                   decoration: BoxDecoration(
-                    color: Colors.purpleAccent,
+                    color: AppStyles.backgroundLight(),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Center(
                     child: _isSigning
-                        ? CircularProgressIndicator(color: Colors.white)
+                        ? CircularProgressIndicator(
+                            color: AppStyles.onBackground())
                         : Text(
                             "Login",
                             style: AppStyles.titleMedium(
@@ -138,7 +139,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -147,7 +148,7 @@ class _LoginPageState extends State<LoginPage> {
                     style: AppStyles.labelSmall(
                         color: Theme.of(context).primaryColor),
                   ),
-                  SizedBox(width: 5),
+                  const SizedBox(width: 5),
                   GestureDetector(
                     onTap: () {
                       Navigator.pushReplacementNamed(context, "/signUp");
@@ -171,13 +172,13 @@ class _LoginPageState extends State<LoginPage> {
     return TextField(
       controller: controller,
       obscureText: isPassword,
-      style: TextStyle(color: Colors.white),
+      style: TextStyle(color: AppStyles.onBackground()),
       decoration: InputDecoration(
         filled: true,
-        fillColor: Colors.white24,
-        prefixIcon: Icon(icon, color: Colors.white),
+        fillColor: AppStyles.background(),
+        prefixIcon: Icon(icon, color: AppStyles.onBackground()),
         hintText: hintText,
-        hintStyle: TextStyle(color: Colors.white60),
+        hintStyle: TextStyle(color: AppStyles.onBackground()),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide.none,
