@@ -42,7 +42,6 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
   Future<void> sendInvite(
       String problemId, String email, String problemName) async {
     try {
-
       final QuerySnapshot userSnapshot = await _firestore
           .collection('users')
           .where('email', isEqualTo: email)
@@ -72,7 +71,6 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
 
   Future<void> fetchProblems(String userId, String userEmail) async {
     try {
-
       final userProblemsSnapshot = await _firestore
           .collection('problems')
           .where('userId', isEqualTo: userId)
@@ -225,7 +223,11 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
 
   Future<void> addContainerToProblem(
       String problemId, String containerName) async {
+    // Generate a unique ID for the container
+    String containerId = _firestore.collection('problems').doc().id;
+
     final newContainer = {
+      'containerId': containerId, // Add the containerId field
       'containerName': containerName,
       'messages': [],
     };
@@ -239,7 +241,7 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
       }
 
       List<dynamic> containers = snapshot.get('containers') ?? [];
-      containers.add(newContainer);
+      containers.add(newContainer); // Add the new container to the list
 
       transaction.update(problemDocRef, {'containers': containers});
     });

@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:diplomovka/pages/features/app/providers/chat_provider.dart';
+import 'package:diplomovka/pages/features/app/providers/user_provider.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:diplomovka/pages/features/app/global/toast.dart';
 
 class ChatPage extends ConsumerStatefulWidget {
+  final String problemId;
   final String chatId;
+  final String containerName;
 
-  const ChatPage({super.key, required this.chatId});
+  const ChatPage({
+    super.key,
+    required this.problemId,
+    required this.chatId,
+    required this.containerName,
+  });
 
   @override
   _ChatPageState createState() => _ChatPageState();
@@ -21,13 +28,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   TextEditingController messageController = TextEditingController();
   ScrollController _scrollController = ScrollController();
   String currentUserEmail = FirebaseAuth.instance.currentUser?.email ?? "";
-  bool _shouldScrollToBottom = true; // Flag to manage scroll behavior
-  bool _showScrollToBottomButton = false; // To control arrow visibility
+  bool _shouldScrollToBottom = true;
+  bool _showScrollToBottomButton = false;
 
   @override
   void initState() {
     super.initState();
 
+    // Fetch chat model and set chat name
     final chatModel = ref.read(chatProvider).firstWhere(
         (chat) => chat.chatId == widget.chatId,
         orElse: () => ChatModel(
@@ -56,23 +64,19 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         _scrollController.position.pixels;
 
     if (distanceFromBottom >= 500) {
-      _shouldScrollToBottom = false; // If user is not near the bottom
+      _shouldScrollToBottom = false;
       setState(() {
-        _showScrollToBottomButton = true; // Show the arrow button
+        _showScrollToBottomButton = true;
       });
-    }
-
-    if (distanceFromBottom > 0 && distanceFromBottom < 500) {
-      _shouldScrollToBottom = false; // If user is not near the bottom
+    } else if (distanceFromBottom > 0 && distanceFromBottom < 500) {
+      _shouldScrollToBottom = false;
       setState(() {
-        _showScrollToBottomButton = false; // Hide the arrow button
+        _showScrollToBottomButton = false;
       });
-    }
-
-    if (distanceFromBottom == 0) {
-      _shouldScrollToBottom = true; // User is near the bottom
+    } else if (distanceFromBottom == 0) {
+      _shouldScrollToBottom = true;
       setState(() {
-        _showScrollToBottomButton = false; // Hide the arrow button
+        _showScrollToBottomButton = false;
       });
     }
   }
@@ -147,7 +151,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                   });
                 },
                 child: Text(
-                  chatModel.chatName,
+                  widget.containerName,
                   style: AppStyles.headLineMedium(
                     color: Theme.of(context).primaryColor,
                   ),
@@ -166,8 +170,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       ),
       body: GestureDetector(
         onTap: () {
-          FocusScope.of(context)
-              .unfocus(); // Unfocus the TextField when tapping outside
+          FocusScope.of(context).unfocus();
         },
         child: Stack(
           children: [
@@ -203,50 +206,30 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                           final isCurrentUser =
                               message['senderEmail'] == currentUserEmail;
 
-                          // Create a unique key based on message content and timestamp
-                          final messageKey = UniqueKey();
-
                           return Align(
-                            key:
-                                messageKey, // Ensure unique key for each message
                             alignment: isCurrentUser
                                 ? Alignment.centerRight
                                 : Alignment.centerLeft,
                             child: Column(
                               children: [
                                 Text(
-                                  senderUsername, // Display the username
+                                  senderUsername,
                                   style: AppStyles.labelSmall(
                                     color: Theme.of(context).primaryColor,
                                   ),
                                 ),
-                                ConstrainedBox(
-                                  constraints: BoxConstraints(
-                                      maxWidth:
-                                          MediaQuery.of(context).size.width *
-                                              0.6),
-                                  child: Container(
-                                    margin: const EdgeInsets.only(bottom: 10),
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: isCurrentUser
-                                          ? Colors.blue[400]
-                                          : Colors.black45,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          message[
-                                              'message'], // Display the message text
-                                          style: AppStyles.titleSmall(
-                                            color:
-                                                Theme.of(context).primaryColor,
-                                          ),
-                                        ),
-                                      ],
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: isCurrentUser
+                                        ? Colors.blue[400]
+                                        : Colors.black45,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    message['message'],
+                                    style: AppStyles.titleSmall(
+                                      color: Theme.of(context).primaryColor,
                                     ),
                                   ),
                                 ),
@@ -284,9 +267,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                               color: Theme.of(context).primaryColor,
                             ),
                             onPressed: () {
-                              ref.read(chatProvider.notifier).sendMessage(
-                                  widget.chatId, messageController.text);
-                              messageController.clear();
+                              if (messageController.text.isNotEmpty) {
+                                ref.read(chatProvider.notifier).sendMessage(
+                                      widget.problemId,
+                                      widget.chatId,
+                                      messageController.text,
+                                      currentUserEmail,
+                                    );
+                                messageController.clear();
+                              }
                             },
                           ),
                         ],
@@ -296,21 +285,21 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                 ),
               ),
             ),
-            if (_showScrollToBottomButton) // Conditionally show the button
+            if (_showScrollToBottomButton)
               Positioned(
                 bottom: 70,
                 right: 20,
                 child: GestureDetector(
                   onTap: _scrollToBottom,
                   child: Container(
-                    padding: EdgeInsets.all(8),
-                    decoration: BoxDecoration(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
                       color: Colors.black,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.arrow_downward,
-                      color: AppStyles.onBackground(),
+                      color: Colors.white,
                     ),
                   ),
                 ),

@@ -305,41 +305,83 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
     }
   }
 
-  Future<void> sendMessage(String chatId, String message) async {
+  Future<void> sendMessage(String problemId, String containerId, String message,
+      String senderEmail) async {
     try {
-      final userId = FirebaseAuth.instance.currentUser!.uid;
-      final senderEmail = FirebaseAuth.instance.currentUser!.email;
-
-      // Manually create a timestamp using DateTime.now(), which will be local
-      final timestamp = DateTime.now();
-
       final newMessage = {
+        'container': containerId,
         'message': message,
-        'senderId': userId,
         'senderEmail': senderEmail,
-        'timestamp': timestamp
-            .toIso8601String(), // Convert timestamp to ISO8601 string format
       };
 
-      print("Attempting to send message: $newMessage");
+      final problemDocRef = _firestore.collection('problems').doc(problemId);
 
-      // Fetch the current messages and update the array manually
-      final chatDocRef = _firestore.collection('chats').doc(chatId);
       await _firestore.runTransaction((transaction) async {
-        final snapshot = await transaction.get(chatDocRef);
+        final snapshot = await transaction.get(problemDocRef);
         if (!snapshot.exists) {
-          throw Exception("Chat does not exist");
+          throw Exception("Problem does not exist");
         }
 
-        List<dynamic> messages = snapshot.get('messages') ?? [];
-        messages.add(newMessage); // Add the new message to the list
+        List<dynamic> containers = snapshot.get('containers') ?? [];
+        // Find the container with the matching containerId
+        final containerIndex =
+            containers.indexWhere((c) => c['containerId'] == containerId);
 
-        transaction.update(chatDocRef, {'messages': messages});
+        if (containerIndex == -1) {
+          throw Exception("Container does not exist");
+        }
+
+        // Add the new message to the container's messages array
+        List<dynamic> messages = containers[containerIndex]['messages'] ?? [];
+        messages.add(newMessage);
+
+        // Update the container's messages array
+        containers[containerIndex]['messages'] = messages;
+
+        // Commit the changes to the Firestore document
+        transaction.update(problemDocRef, {'containers': containers});
       });
 
       print("Message sent successfully");
     } catch (e) {
       print("Error sending message: $e");
+      throw e;
+    }
+  }
+
+  Future<void> fetchMessages(String problemId, String containerId) async {
+    try {
+      final problemDoc =
+          await _firestore.collection('problems').doc(problemId).get();
+
+      if (!problemDoc.exists) {
+        throw Exception("Problem does not exist");
+      }
+
+      final containers = problemDoc.data()?['containers'] ?? [];
+
+      final container = containers.firstWhere(
+        (c) => c['containerId'] == containerId,
+        orElse: () => null,
+      );
+
+      if (container == null) {
+        throw Exception("Container does not exist");
+      }
+
+      final messages = container['messages'] ?? [];
+
+      // Assuming you have a chat model to store messages
+      final chatModel = ChatModel(
+        chatId: containerId,
+        chatName: container['containerName'] ?? 'Unknown',
+        messages: List<Map<String, dynamic>>.from(messages),
+      );
+
+      // Update state with the fetched messages
+      state = [...state, chatModel];
+    } catch (e) {
+      print("Error fetching messages: $e");
     }
   }
 

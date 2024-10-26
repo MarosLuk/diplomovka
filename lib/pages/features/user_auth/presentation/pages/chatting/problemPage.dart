@@ -89,8 +89,14 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) =>
-                                ChatPage(chatId: container.containerId),
+                            builder: (context) => ChatPage(
+                              problemId:
+                                  widget.problemId, // Pass the problemId here
+                              chatId: container
+                                  .containerId, // Pass the container (chat) ID
+                              containerName: container
+                                  .containerName, // Pass the container name
+                            ),
                           ),
                         );
                       },
