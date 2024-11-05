@@ -37,10 +37,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   void initState() {
     super.initState();
 
-    // Start a timer to fetch messages every 500ms
     _startFetchingMessages();
 
-    // Scroll to bottom when chat is opened
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollToBottom();
     });
@@ -48,20 +46,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     _scrollController.addListener(_onScroll);
   }
 
-  // Start fetching messages every 500ms
   void _startFetchingMessages() {
     _fetchTimer = Timer.periodic(Duration(milliseconds: 2500), (timer) async {
-      print("Fetching messages for chat: ${widget.chatId}");
       final messages = await ref
           .read(chatProvider.notifier)
           .fetchMessages(widget.problemId, widget.chatId);
-
-      // Print the fetched messages
-      print("Fetched messages: $messages");
     });
   }
 
-  // Handle scroll events
   void _onScroll() {
     final distanceFromBottom = _scrollController.position.maxScrollExtent -
         _scrollController.position.pixels;
@@ -84,7 +76,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     }
   }
 
-  // Smoothly scroll to the bottom of the ListView
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
@@ -100,7 +91,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     _chatNameController.dispose();
     messageController.dispose();
     _scrollController.dispose();
-    _fetchTimer?.cancel(); // Cancel the timer when the page is disposed
+    _fetchTimer?.cancel();
     super.dispose();
   }
 
@@ -113,7 +104,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             chatId: widget.chatId, chatName: 'Unknown', messages: []));
     print("Messages in chatModel: ${chatModel.messages}");
 
-    // Scroll to bottom if new message arrives and user is already at the bottom
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_shouldScrollToBottom) {
         _scrollToBottom();

@@ -18,7 +18,6 @@ class ChatModel {
 
 class ChatNotifier extends StateNotifier<List<ChatModel>> {
   ChatNotifier() : super([]) {
-    // Disable persistence for Firestore to avoid using offline data
     FirebaseFirestore.instance.settings = const Settings(
       persistenceEnabled: false,
     );
@@ -27,7 +26,6 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final Map<String, String> _usernameCache = {}; // Cache for username
 
-  // Create a new chat, directly reflecting in Firestore without any offline checks
   Future<String> createNewChat(String chatName, String userId) async {
     final newChat = {
       'chatName': chatName,
@@ -108,7 +106,6 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
     }
   }
 
-// Function to show dialog (success or error)
   Future<void> _showDialog(
       BuildContext context, String title, String message) async {
     return showDialog<void>(
@@ -137,7 +134,6 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
     );
   }
 
-  // Prompt for invite email - moved from ChatPage
   Future<void> promptForInviteEmail(
       BuildContext context, String chatId, String chatName) async {
     TextEditingController _inviteEmailController = TextEditingController();
@@ -241,7 +237,6 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
     );
   }
 
-  // Fetch both user's own chats and chats where the user is a participant
   Future<void> fetchChats(String userId, String userEmail) async {
     try {
       final userChatsSnapshot = await _firestore
@@ -385,7 +380,6 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
 
       final messages =
           List<Map<String, dynamic>>.from(container['messages'] ?? []);
-      print("Existing chatProvider state before update: $state");
 
       final updatedChatModel = ChatModel(
         chatId: containerId,
@@ -393,15 +387,13 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
         messages: messages,
       );
 
-// If a chat with containerId exists, replace it; otherwise, add it
       state = [
         for (final chat in state)
           if (chat.chatId == containerId) updatedChatModel else chat,
         if (!state.any((chat) => chat.chatId == containerId)) updatedChatModel,
       ];
 
-      state = [...state]; // Force provider to update listeners
-      print("Updated state in chatProvider: $state");
+      state = [...state];
 
       return messages;
     } catch (e) {
@@ -410,7 +402,6 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
     }
   }
 
-  // Update the chat name in Firestore and local state
   Future<void> updateChatName(String chatId, String newChatName) async {
     await _firestore.collection('chats').doc(chatId).update({
       'chatName': newChatName,
@@ -429,7 +420,6 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
     ];
   }
 
-  // Clear state when the user logs out or no longer needs the chat list
   void clearState() {
     state = [];
   }
