@@ -305,11 +305,10 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
     }
   }
 
-  Future<void> sendMessage(String problemId, String containerId, String message,
+  Future<void> sendMessage(String problemId, String chatId, String message,
       String senderEmail) async {
     try {
       final newMessage = {
-        'container': containerId,
         'message': message,
         'senderEmail': senderEmail,
       };
@@ -323,9 +322,8 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
         }
 
         List<dynamic> containers = snapshot.get('containers') ?? [];
-        // Find the container with the matching containerId
         final containerIndex =
-            containers.indexWhere((c) => c['containerId'] == containerId);
+            containers.indexWhere((c) => c['containerId'] == chatId);
 
         if (containerIndex == -1) {
           throw Exception("Container does not exist");
@@ -335,14 +333,29 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
         List<dynamic> messages = containers[containerIndex]['messages'] ?? [];
         messages.add(newMessage);
 
-        // Update the container's messages array
         containers[containerIndex]['messages'] = messages;
 
-        // Commit the changes to the Firestore document
         transaction.update(problemDocRef, {'containers': containers});
       });
 
-      print("Message sent successfully");
+      // After adding the message to Firestore, add it to the local state for immediate UI update
+      final chatModel = state.firstWhere((chat) => chat.chatId == chatId);
+      chatModel.messages.add({
+        'message': message,
+        'senderEmail': senderEmail,
+      });
+
+      state = [
+        for (final chat in state)
+          if (chat.chatId == chatId)
+            ChatModel(
+              chatId: chat.chatId,
+              chatName: chat.chatName,
+              messages: chatModel.messages,
+            )
+          else
+            chat,
+      ];
     } catch (e) {
       print("Error sending message: $e");
       throw e;

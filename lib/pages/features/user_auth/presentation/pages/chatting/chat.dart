@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:diplomovka/pages/features/app/providers/chat_provider.dart';
@@ -30,25 +31,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   String currentUserEmail = FirebaseAuth.instance.currentUser?.email ?? "";
   bool _shouldScrollToBottom = true;
   bool _showScrollToBottomButton = false;
+  Timer? _fetchTimer;
 
   @override
   void initState() {
     super.initState();
 
-    // Fetch chat model and set chat name
-    final chatModel = ref.read(chatProvider).firstWhere(
-        (chat) => chat.chatId == widget.chatId,
-        orElse: () => ChatModel(
-            chatId: widget.chatId, chatName: 'Unknown', messages: []));
-
-    if (chatModel != null) {
-      _chatNameController.text = chatModel.chatName;
-    } else {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        showToast(message: 'Chat does not exist or has been deleted');
-        Navigator.pop(context);
-      });
-    }
+    // Start a timer to fetch messages every 500ms
+    _startFetchingMessages();
 
     // Scroll to bottom when chat is opened
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -56,6 +46,15 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     });
 
     _scrollController.addListener(_onScroll);
+  }
+
+  // Start fetching messages every 500ms
+  void _startFetchingMessages() {
+    _fetchTimer = Timer.periodic(Duration(milliseconds: 500), (timer) async {
+      await ref
+          .read(chatProvider.notifier)
+          .fetchMessages(widget.problemId, widget.chatId);
+    });
   }
 
   // Handle scroll events
@@ -97,6 +96,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     _chatNameController.dispose();
     messageController.dispose();
     _scrollController.dispose();
+    _fetchTimer?.cancel(); // Cancel the timer when the page is disposed
     super.dispose();
   }
 
