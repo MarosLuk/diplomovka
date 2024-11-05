@@ -362,7 +362,8 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
     }
   }
 
-  Future<void> fetchMessages(String problemId, String containerId) async {
+  Future<List<Map<String, dynamic>>> fetchMessages(
+      String problemId, String containerId) async {
     try {
       final problemDoc =
           await _firestore.collection('problems').doc(problemId).get();
@@ -382,19 +383,30 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
         throw Exception("Container does not exist");
       }
 
-      final messages = container['messages'] ?? [];
+      final messages =
+          List<Map<String, dynamic>>.from(container['messages'] ?? []);
+      print("Existing chatProvider state before update: $state");
 
-      // Assuming you have a chat model to store messages
-      final chatModel = ChatModel(
+      final updatedChatModel = ChatModel(
         chatId: containerId,
         chatName: container['containerName'] ?? 'Unknown',
-        messages: List<Map<String, dynamic>>.from(messages),
+        messages: messages,
       );
 
-      // Update state with the fetched messages
-      state = [...state, chatModel];
+// If a chat with containerId exists, replace it; otherwise, add it
+      state = [
+        for (final chat in state)
+          if (chat.chatId == containerId) updatedChatModel else chat,
+        if (!state.any((chat) => chat.chatId == containerId)) updatedChatModel,
+      ];
+
+      state = [...state]; // Force provider to update listeners
+      print("Updated state in chatProvider: $state");
+
+      return messages;
     } catch (e) {
       print("Error fetching messages: $e");
+      return [];
     }
   }
 

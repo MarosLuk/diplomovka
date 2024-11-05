@@ -50,10 +50,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   // Start fetching messages every 500ms
   void _startFetchingMessages() {
-    _fetchTimer = Timer.periodic(Duration(milliseconds: 500), (timer) async {
-      await ref
+    _fetchTimer = Timer.periodic(Duration(milliseconds: 2500), (timer) async {
+      print("Fetching messages for chat: ${widget.chatId}");
+      final messages = await ref
           .read(chatProvider.notifier)
           .fetchMessages(widget.problemId, widget.chatId);
+
+      // Print the fetched messages
+      print("Fetched messages: $messages");
     });
   }
 
@@ -102,10 +106,12 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
+    print("Building ChatPage for chatId: ${widget.chatId}");
     final chatModel = ref.watch(chatProvider).firstWhere(
         (chat) => chat.chatId == widget.chatId,
         orElse: () => ChatModel(
             chatId: widget.chatId, chatName: 'Unknown', messages: []));
+    print("Messages in chatModel: ${chatModel.messages}");
 
     // Scroll to bottom if new message arrives and user is already at the bottom
     WidgetsBinding.instance.addPostFrameCallback((_) {
