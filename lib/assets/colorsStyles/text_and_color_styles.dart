@@ -110,28 +110,6 @@ class AppStyles {
     );
   }
 
-  static TextStyle headLineTypeWorkout({required Color color}) {
-    return GoogleFonts.nunito(
-      textStyle: TextStyle(
-        color: color,
-        fontSize: 24.0,
-        fontWeight: FontWeight.w700,
-        height: 1.5,
-        letterSpacing: 0.02 * 24,
-      ),
-    );
-  }
-
-  static TextStyle timesPerWeekPicker({required Color color}) {
-    return GoogleFonts.nunito(
-      textStyle: TextStyle(
-        color: color,
-        fontSize: 18.0,
-        fontWeight: FontWeight.w700,
-      ),
-    );
-  }
-
   static TextStyle titleMedium({required Color color}) {
     return GoogleFonts.nunito(
       textStyle: TextStyle(
@@ -208,77 +186,6 @@ class AppStyles {
         fontWeight: FontWeight.w700,
         height: 19.1 / 14.0,
         letterSpacing: 0.02 * 14.0,
-      ),
-    );
-  }
-
-  static TextStyle clockTime({required Color color}) {
-    return GoogleFonts.nunito(
-      textStyle: TextStyle(
-        color: color,
-        fontSize: 24,
-        fontWeight: FontWeight.w400,
-        height: 1.5,
-        letterSpacing: 0.02,
-      ),
-    );
-  }
-
-  static TextStyle outdoorSpentTime({required Color color}) {
-    return GoogleFonts.nunito(
-      textStyle: TextStyle(
-        color: color,
-        fontSize: 48,
-        fontWeight: FontWeight.w400,
-        height: 1.5,
-        letterSpacing: 0.02,
-      ),
-    );
-  }
-
-  static TextStyle coachHint({required Color color}) {
-    return GoogleFonts.nunito(
-      textStyle: TextStyle(
-        color: color,
-        fontSize: 14.0,
-        fontWeight: FontWeight.w400,
-        height: 20.0 / 15.1,
-      ),
-    );
-  }
-
-  static TextStyle selectedValueFromCrolingRuller({required Color color}) {
-    return GoogleFonts.nunito(
-      textStyle: TextStyle(
-        color: color,
-        fontSize: 48.0,
-        fontWeight: FontWeight.w400,
-        height: 1.5,
-        letterSpacing: 0.02,
-      ),
-    );
-  }
-
-  static TextStyle selectedUnitFromCrolingRuller({required Color color}) {
-    return GoogleFonts.nunito(
-      textStyle: TextStyle(
-        color: color,
-        fontSize: 24.0,
-        fontWeight: FontWeight.w400,
-        height: 0.75,
-        letterSpacing: 0.02,
-      ),
-    );
-  }
-
-  static TextStyle timesPerWeekStyle({required Color color}) {
-    return GoogleFonts.nunito(
-      textStyle: TextStyle(
-        color: color,
-        fontSize: 28.0,
-        fontWeight: FontWeight.w600,
-        height: 42.0 / 28.0,
-        letterSpacing: 0.56,
       ),
     );
   }
