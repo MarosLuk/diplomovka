@@ -33,7 +33,9 @@ class SelectionNotifier extends StateNotifier<Map<String, bool>> {
 
     for (var section in sections) {
       final sectionTitle = section['title'] as String;
-      final sectionOptions = section['keyFocus'] as List<String>;
+      final sectionOptions = (section['keyFocus'] as List<dynamic>)
+          .map((e) => e as String)
+          .toList();
 
       final selectedOptionsForSection =
           sectionOptions.where((option) => state[option] == true).toList();
@@ -47,12 +49,13 @@ class SelectionNotifier extends StateNotifier<Map<String, bool>> {
   }
 
   void saveSelections(WidgetRef ref, BuildContext context, String problemId,
-      List<Map<String, dynamic>> sections) async {
+      List<Map<String, dynamic>> sections, optionContent) async {
     final selectedGrouped = getSelectedOptionsGroupedBySections(sections);
 
     print("Selected options grouped by sections: $selectedGrouped");
 
-    final generatedWords = generateSectionWords(sections, selectedGrouped);
+    final generatedWords =
+        generateSectionWords(sections, selectedGrouped, optionContent);
     print("Generated words for each section: $generatedWords");
 
     await ref
@@ -81,7 +84,21 @@ class ProblemPage extends ConsumerStatefulWidget {
 class _ProblemPageState extends ConsumerState<ProblemPage> {
   TextEditingController _containerNameController = TextEditingController();
 
-  void specificationBottomSheet(BuildContext context, WidgetRef ref) {
+  void specificationBottomSheet(BuildContext context, WidgetRef ref) async {
+    final fetchedData =
+        await ref.read(problemProvider.notifier).fetchProblemSpecifications();
+
+    if (fetchedData.isEmpty) {
+      print("Failed to load specifications data.");
+      return;
+    }
+
+    final sectionsData = (fetchedData['sectionsData'] as List)
+        .map((e) => e as Map<String, dynamic>)
+        .toList();
+    final optionContent = (fetchedData['optionContent'] as Map<String, dynamic>)
+        .map((key, value) => MapEntry(key, List<String>.from(value)));
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -92,8 +109,7 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
       builder: (BuildContext context) {
         return SafeArea(
           child: Container(
-            height: MediaQuery.of(context).size.height *
-                0.8, // 80% of screen height
+            height: MediaQuery.of(context).size.height * 0.8,
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: SingleChildScrollView(
               child: Column(
@@ -128,8 +144,8 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
                       GestureDetector(
                         onTap: () => ref
                             .read(selectionProvider.notifier)
-                            .saveSelections(
-                                ref, context, widget.problemId, sectionsData),
+                            .saveSelections(ref, context, widget.problemId,
+                                sectionsData, optionContent),
                         child: Container(
                           width: 100,
                           height: 54,
@@ -150,13 +166,11 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
                   ),
                   const SizedBox(height: 12),
                   for (var section in sectionsData) ...[
-                    // Section title
                     Text(
                       section['title'],
                       style: AppStyles.titleMedium(color: Colors.white),
                     ),
                     const SizedBox(height: 8),
-
                     for (var focus in section['keyFocus'])
                       GestureDetector(
                         onTap: () {
@@ -195,7 +209,6 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
                           },
                         ),
                       ),
-
                     Divider(
                       color: AppStyles.Primary30(),
                       thickness: 1,
@@ -209,6 +222,12 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
         );
       },
     );
+  }
+
+  void initState() {
+    super.initState();
+
+    //uploadSpecificationsToFirestore();
   }
 
   @override

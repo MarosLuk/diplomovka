@@ -2,7 +2,8 @@ import 'dart:math';
 
 Map<String, List<String>> generateSectionWords(
     List<Map<String, dynamic>> sectionsData,
-    Map<String, List<String>> selectedOptions) {
+    Map<String, List<String>> selectedOptions,
+    Map<String, List<String>> optionContent) {
   final Random random = Random();
   final Map<String, List<String>> result = {};
 
@@ -51,6 +52,7 @@ Map<String, List<String>> generateSectionWords(
   return result;
 }
 
+/*
 final Map<String, List<String>> optionContent = {
   "Authentication and Authorization": [
     "user",
@@ -334,4 +336,8 @@ final List<Map<String, dynamic>> sectionsData = [
       "Handling Growth"
     ],
   },
+
+
 ];
+
+ */

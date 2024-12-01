@@ -39,6 +39,33 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  Future<Map<String, dynamic>> fetchProblemSpecifications() async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+    try {
+      final sectionsSnapshot = await firestore
+          .collection('problemSpecifications')
+          .doc('sections')
+          .get();
+      final sections = sectionsSnapshot.data()?['sections'] as List<dynamic>;
+
+      final optionContentSnapshot = await firestore
+          .collection('problemSpecifications')
+          .doc('optionContent')
+          .get();
+      final optionContent =
+          optionContentSnapshot.data() as Map<String, dynamic>;
+
+      return {
+        'sectionsData': sections,
+        'optionContent': optionContent,
+      };
+    } catch (e) {
+      print("Error fetching problem specifications: $e");
+      return {};
+    }
+  }
+
   Future<void> sendInvite(
       String problemId, String email, String problemName) async {
     try {
