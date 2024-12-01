@@ -12,6 +12,7 @@ import 'package:diplomovka/pages/features/app/providers/invitation_provider.dart
 import 'dart:async';
 import 'package:diplomovka/pages/features/app/providers/problem_provider.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/chatting/problemPage.dart';
+import 'package:diplomovka/pages/features/app/providers/problem_provider.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -56,6 +57,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   void initState() {
     super.initState();
+
     if (user != null) {
       ref.read(problemProvider.notifier).fetchProblems(user!.uid, user!.email!);
 
@@ -111,6 +113,11 @@ class _HomePageState extends ConsumerState<HomePage> {
               color: Theme.of(context).primaryColor,
             ),
             onPressed: () async {
+              /*await ref
+                  .read(problemProvider.notifier)
+                  .uploadSpecificationsWithVotesToFirestore();
+
+               */
               String? problemName = await ref
                   .read(problemProvider.notifier)
                   .promptForProblemName(context);

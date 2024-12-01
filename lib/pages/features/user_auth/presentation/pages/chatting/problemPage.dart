@@ -48,22 +48,61 @@ class SelectionNotifier extends StateNotifier<Map<String, bool>> {
     return selectedGroupedBySections;
   }
 
-  void saveSelections(WidgetRef ref, BuildContext context, String problemId,
-      List<Map<String, dynamic>> sections, optionContent) async {
-    final selectedGrouped = getSelectedOptionsGroupedBySections(sections);
+  void saveSelections(
+      WidgetRef ref,
+      BuildContext context,
+      String problemId,
+      List<Map<String, dynamic>> sections,
+      Map<String, dynamic> rawOptionContent) async {
+    try {
+      final selectedGrouped = getSelectedOptionsGroupedBySections(sections);
+      print("Selected options grouped by sections: $selectedGrouped");
 
-    print("Selected options grouped by sections: $selectedGrouped");
+      final unwrappedOptionContent = rawOptionContent['optionContent'];
+      if (unwrappedOptionContent is! Map<String, dynamic>) {
+        throw Exception("Invalid format for unwrapped optionContent");
+      }
 
-    final generatedWords =
-        generateSectionWords(sections, selectedGrouped, optionContent);
-    print("Generated words for each section: $generatedWords");
+      final optionContent = unwrappedOptionContent.map((key, value) {
+        if (value is List) {
+          final processedList = value.map((entry) {
+            if (entry is Map<String, dynamic> &&
+                entry.containsKey('option') &&
+                entry.containsKey('upvotes') &&
+                entry.containsKey('downvotes')) {
+              return {
+                'option': entry['option'] as String,
+                'upvotes': entry['upvotes'] as int,
+                'downvotes': entry['downvotes'] as int,
+              };
+            } else {
+              throw Exception(
+                  "Invalid entry format in optionContent for key $key: $entry");
+            }
+          }).toList();
 
-    await ref
-        .read(problemProvider.notifier)
-        .addContainersToProblem(problemId, generatedWords);
+          return MapEntry(key, processedList);
+        } else {
+          throw Exception(
+              "Invalid value type in optionContent for key: $key, value: $value");
+        }
+      });
 
-    Navigator.of(context).pop();
-    clearSelections();
+      final generatedWords =
+          generateSectionWords(sections, selectedGrouped, optionContent);
+
+      await ref
+          .read(problemProvider.notifier)
+          .addContainersToProblem(problemId, generatedWords);
+
+      Navigator.of(context).pop();
+      clearSelections();
+    } catch (e) {
+      showToast(
+        message: "Error in saveSelections: $e",
+        isError: true,
+      );
+    }
   }
 }
 
@@ -85,149 +124,402 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
   TextEditingController _containerNameController = TextEditingController();
 
   void specificationBottomSheet(BuildContext context, WidgetRef ref) async {
-    final fetchedData =
-        await ref.read(problemProvider.notifier).fetchProblemSpecifications();
+    try {
+      // Fetch problem specifications from provider
+      final fetchedData =
+          await ref.read(problemProvider.notifier).fetchProblemSpecifications();
 
-    if (fetchedData.isEmpty) {
-      print("Failed to load specifications data.");
-      return;
-    }
+      if (fetchedData.isEmpty) {
+        showToast(
+          message: "Failed to load specifications data.",
+          isError: true,
+        );
+        print("Failed to load specifications data.");
+        return;
+      }
 
-    final sectionsData = (fetchedData['sectionsData'] as List)
-        .map((e) => e as Map<String, dynamic>)
-        .toList();
-    final optionContent = (fetchedData['optionContent'] as Map<String, dynamic>)
-        .map((key, value) => MapEntry(key, List<String>.from(value)));
+      // Parse sectionsData to ensure correct type
+      final sectionsData = (fetchedData['sectionsData'] as List)
+          .map((e) => e as Map<String, dynamic>)
+          .toList();
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppStyles.Primary50(),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (BuildContext context) {
-        return SafeArea(
-          child: Container(
-            height: MediaQuery.of(context).size.height * 0.8,
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 12),
-                  Reusablecomponents.bottomSheetTopButton(),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      GestureDetector(
-                        onTap: ref
-                            .read(selectionProvider.notifier)
-                            .clearSelections,
-                        child: Container(
-                          width: 100,
-                          height: 54,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Center(
-                            child: Text(
-                              "Clear",
-                              style:
-                                  AppStyles.headLineSmall(color: Colors.black),
-                            ),
-                          ),
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () => ref
-                            .read(selectionProvider.notifier)
-                            .saveSelections(ref, context, widget.problemId,
-                                sectionsData, optionContent),
-                        child: Container(
-                          width: 100,
-                          height: 54,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Center(
-                            child: Text(
-                              "Save",
-                              style:
-                                  AppStyles.headLineSmall(color: Colors.black),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  for (var section in sectionsData) ...[
-                    Text(
-                      section['title'],
-                      style: AppStyles.titleMedium(color: Colors.white),
-                    ),
-                    const SizedBox(height: 8),
-                    for (var focus in section['keyFocus'])
-                      GestureDetector(
-                        onTap: () {
-                          ref
+      // Parse optionContent, no further transformations needed
+      final optionContent =
+          fetchedData['optionContent'] as Map<String, dynamic>;
+
+      // Display the bottom sheet
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: AppStyles.Primary50(),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (BuildContext context) {
+          return SafeArea(
+            child: Container(
+              height: MediaQuery.of(context).size.height * 0.8,
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 12),
+                    Reusablecomponents.bottomSheetTopButton(),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        GestureDetector(
+                          onTap: ref
                               .read(selectionProvider.notifier)
-                              .toggleSelection(focus);
-                        },
-                        child: Consumer(
-                          builder: (context, ref, _) {
-                            final isSelected =
-                                ref.watch(selectionProvider)[focus] ?? false;
-                            return Container(
-                              height: 50,
-                              margin: const EdgeInsets.only(bottom: 8),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? Colors.green[200]
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 2,
-                                ),
+                              .clearSelections,
+                          child: Container(
+                            width: 100,
+                            height: 54,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: Text(
+                                "Clear",
+                                style: AppStyles.headLineSmall(
+                                    color: Colors.black),
                               ),
-                              child: Center(
-                                child: Text(
-                                  focus,
-                                  style: AppStyles.labelMedium(
-                                    color: isSelected
-                                        ? Colors.black
-                                        : Colors.white,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => ref
+                              .read(selectionProvider.notifier)
+                              .saveSelections(ref, context, widget.problemId,
+                                  sectionsData, optionContent),
+                          child: Container(
+                            width: 100,
+                            height: 54,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: Text(
+                                "Save",
+                                style: AppStyles.headLineSmall(
+                                    color: Colors.black),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    for (var section in sectionsData) ...[
+                      Text(
+                        section['title'],
+                        style: AppStyles.titleMedium(color: Colors.white),
+                      ),
+                      const SizedBox(height: 8),
+                      for (var focus in section['keyFocus'])
+                        GestureDetector(
+                          onTap: () {
+                            ref
+                                .read(selectionProvider.notifier)
+                                .toggleSelection(focus);
+                          },
+                          child: Consumer(
+                            builder: (context, ref, _) {
+                              final isSelected =
+                                  ref.watch(selectionProvider)[focus] ?? false;
+                              return Container(
+                                height: 50,
+                                margin: const EdgeInsets.only(bottom: 8),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? Colors.green[200]
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
                                   ),
                                 ),
-                              ),
-                            );
-                          },
+                                child: Center(
+                                  child: Text(
+                                    focus,
+                                    style: AppStyles.labelMedium(
+                                      color: isSelected
+                                          ? Colors.black
+                                          : Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         ),
+                      Divider(
+                        color: AppStyles.Primary30(),
+                        thickness: 1,
+                        height: 32,
                       ),
-                    Divider(
-                      color: AppStyles.Primary30(),
-                      thickness: 1,
-                      height: 32,
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
+    } catch (e) {
+      print("Error parsing data : $e");
+      showToast(
+        message: "Error parsing data : $e",
+        isError: true,
+      );
+    }
   }
 
   void initState() {
     super.initState();
 
     //uploadSpecificationsToFirestore();
+  }
+
+  final Map<String, List<String>> sectionToSubsections = {
+    "Security": [
+      "Authentication and Authorization",
+      "Data Encryption",
+      "Vulnerability Analysis",
+      "Secure Storage",
+      "Protection Against Attacks",
+    ],
+    "Performance": [
+      "App Responsiveness",
+      "Memory Usage Optimization",
+      "Efficient Network Requests",
+      "Caching and Lazy Loading",
+      "Profiling and Debugging",
+    ],
+    "User Interface (UI)": [
+      "Design Consistency",
+      "Accessibility Features",
+      "Typography and Colors",
+      "Adherence to Guidelines",
+      "Component Reusability",
+    ],
+    "User Experience (UX)": [
+      "Intuitive Navigation",
+      "User Feedback",
+      "Bug-Free Interactions",
+      "Satisfaction Metrics",
+      "Improved User Retention",
+    ],
+    "Code Quality": [
+      "Readability and Maintainability",
+      "Adherence to Standards",
+      "Refactoring Opportunities",
+      "Modularization",
+      "Technical Debt Analysis",
+    ],
+    "Scalability": [
+      "Efficient Database Design",
+      "API Scalability",
+      "Load Balancing",
+      "Rate Limiting",
+      "Handling Growth",
+    ],
+  };
+
+  void showVoteDialog(BuildContext context, List<String> subsections,
+      String option, WidgetRef ref) async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+    int currentUpvotes = 0;
+    int currentDownvotes = 0;
+
+    try {
+      final snapshot = await firestore
+          .collection('problemSpecifications')
+          .doc('optionContent')
+          .get();
+
+      final optionContent =
+          snapshot.data()?['optionContent'] as Map<String, dynamic>?;
+      if (optionContent == null) {
+        throw Exception("optionContent not found in Firestore.");
+      }
+
+      for (final subsection in subsections) {
+        if (optionContent.containsKey(subsection)) {
+          final subsectionOptions = optionContent[subsection] as List<dynamic>;
+          final entry = subsectionOptions.firstWhere(
+            (item) => item['option'] == option,
+            orElse: () => null,
+          );
+
+          if (entry != null) {
+            currentUpvotes = entry['upvotes'] ?? 0;
+            currentDownvotes = entry['downvotes'] ?? 0;
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      print("Error fetching option data: $e");
+      showToast(
+        message: "Error fetching option data: $e",
+        isError: true,
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        int upvotesToAdd = 0;
+        int downvotesToAdd = 0;
+
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return AlertDialog(
+              backgroundColor: AppStyles.Primary50(),
+              title: Text("Set Votes for $option"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Upvotes to Add:"),
+                      IconButton(
+                        icon: const Icon(Icons.remove),
+                        onPressed: () {
+                          if (upvotesToAdd > 0) {
+                            setState(() {
+                              upvotesToAdd--;
+                            });
+                          }
+                        },
+                      ),
+                      Text(upvotesToAdd.toString()),
+                      IconButton(
+                        icon: const Icon(Icons.add),
+                        onPressed: () {
+                          if (upvotesToAdd < 5) {
+                            setState(() {
+                              upvotesToAdd++;
+                            });
+                          } else {
+                            showToast(
+                              message: "Maximum 5 votes can be added per save.",
+                              isError: true,
+                            );
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Downvotes to Add:"),
+                      IconButton(
+                        icon: const Icon(Icons.remove),
+                        onPressed: () {
+                          if (downvotesToAdd > 0) {
+                            setState(() {
+                              downvotesToAdd--;
+                            });
+                          }
+                        },
+                      ),
+                      Text(downvotesToAdd.toString()),
+                      IconButton(
+                        icon: const Icon(Icons.add),
+                        onPressed: () {
+                          if (downvotesToAdd < 5) {
+                            setState(() {
+                              downvotesToAdd++;
+                            });
+                          } else {
+                            showToast(
+                              message: "Maximum 5 votes can be added per save.",
+                              isError: true,
+                            );
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text("Cancel"),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    try {
+                      final optionContentRef = firestore
+                          .collection('problemSpecifications')
+                          .doc('optionContent');
+
+                      final snapshot = await optionContentRef.get();
+                      final optionContent = snapshot.data()?['optionContent'];
+
+                      if (optionContent == null) {
+                        throw Exception(
+                            "optionContent not found during update.");
+                      }
+
+                      for (final subsection in subsections) {
+                        if (optionContent.containsKey(subsection)) {
+                          final updatedSubsection =
+                              (optionContent[subsection] as List<dynamic>)
+                                  .map((entry) {
+                            if (entry['option'] == option) {
+                              return {
+                                'option': entry['option'],
+                                'upvotes': entry['upvotes'] + upvotesToAdd,
+                                'downvotes':
+                                    entry['downvotes'] + downvotesToAdd,
+                              };
+                            }
+                            return entry;
+                          }).toList();
+
+                          await optionContentRef.update({
+                            'optionContent.$subsection': updatedSubsection,
+                          });
+
+                          print(
+                              "Votes updated for $option: Upvotes added=$upvotesToAdd, Downvotes added=$downvotesToAdd");
+                          showToast(
+                            message:
+                                "Votes updated: +$upvotesToAdd upvotes, +$downvotesToAdd downvotes for $option.",
+                          );
+                          break;
+                        }
+                      }
+                      Navigator.of(context).pop();
+                    } catch (e) {
+                      print("Error updating votes: $e");
+                      showToast(
+                        message: "Failed to update votes.",
+                        isError: true,
+                      );
+                    }
+                  },
+                  child: const Text("Save"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -303,6 +595,32 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
                             ),
                           ),
                         );
+                      },
+                      onLongPress: () {
+                        final parts = container.containerName.split(": ");
+                        if (parts.length == 2) {
+                          final section = parts[0].trim();
+                          final option = parts[1].trim();
+
+                          final subsections = sectionToSubsections[section];
+                          if (subsections != null) {
+                            showVoteDialog(context, subsections, option, ref);
+                          } else {
+                            print("Section not found in mapping: $section");
+                            showToast(
+                              message: "Section not found in mapping: $section",
+                              isError: true,
+                            );
+                          }
+                        } else {
+                          print(
+                              "Invalid container name format: ${container.containerName}");
+                          showToast(
+                            message:
+                                "Invalid container name format: ${container.containerName}",
+                            isError: true,
+                          );
+                        }
                       },
                     );
                   },

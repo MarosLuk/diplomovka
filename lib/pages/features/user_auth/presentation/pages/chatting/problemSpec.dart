@@ -3,7 +3,7 @@ import 'dart:math';
 Map<String, List<String>> generateSectionWords(
     List<Map<String, dynamic>> sectionsData,
     Map<String, List<String>> selectedOptions,
-    Map<String, List<String>> optionContent) {
+    Map<String, List<Map<String, dynamic>>> optionContent) {
   final Random random = Random();
   final Map<String, List<String>> result = {};
 
@@ -24,22 +24,29 @@ Map<String, List<String>> generateSectionWords(
 
       for (int i = 0; i < options.length; i++) {
         final option = options[i];
-        final List<String> optionWords = optionContent[option] ?? [];
-        if (optionWords.isNotEmpty) {
-          final List<String> availableWords =
-              optionWords.where((word) => !usedWords.contains(word)).toList();
+        final List<Map<String, dynamic>> optionWords =
+            optionContent[option] ?? [];
 
-          sectionWords.addAll(
-            List.generate(wordsPerOption[i], (_) {
-              if (availableWords.isEmpty) return "";
-              final word =
-                  availableWords[random.nextInt(availableWords.length)];
-              usedWords.add(word);
-              availableWords.remove(word);
-              return word;
-            }),
-          );
-        }
+        optionWords.sort((a, b) {
+          final upvotesDiff = b['upvotes'] - a['upvotes'];
+          if (upvotesDiff != 0) return upvotesDiff;
+          return a['downvotes'] - b['downvotes'];
+        });
+
+        final List<String> availableWords = optionWords
+            .map((entry) => entry['option'] as String)
+            .where((word) => !usedWords.contains(word))
+            .toList();
+
+        sectionWords.addAll(
+          List.generate(wordsPerOption[i], (_) {
+            if (availableWords.isEmpty) return "";
+            final word = availableWords[random.nextInt(availableWords.length)];
+            usedWords.add(word);
+            availableWords.remove(word);
+            return word;
+          }),
+        );
       }
     }
 
@@ -53,7 +60,7 @@ Map<String, List<String>> generateSectionWords(
 }
 
 /*
-final Map<String, List<String>> optionContent = {
+final Map<String, List<String>> optionsContent = {
   "Authentication and Authorization": [
     "user",
     "login",
@@ -275,7 +282,7 @@ final Map<String, List<String>> optionContent = {
     "report"
   ]
 };
-final List<Map<String, dynamic>> sectionsData = [
+final List<Map<String, dynamic>> sectionsDatas = [
   {
     "title": "Security",
     "keyFocus": [
@@ -336,8 +343,6 @@ final List<Map<String, dynamic>> sectionsData = [
       "Handling Growth"
     ],
   },
-
-
 ];
 
  */

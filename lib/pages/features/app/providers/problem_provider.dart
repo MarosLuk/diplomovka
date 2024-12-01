@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
 import 'package:diplomovka/pages/features/app/providers/invitation_provider.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
+import 'package:diplomovka/pages/features/user_auth/presentation/pages/chatting/problemSpec.dart';
+import 'package:diplomovka/pages/features/app/global/toast.dart';
 
 class ProblemModel {
   String problemId;
@@ -38,6 +40,39 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
   }
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+/*
+  Future<void> uploadSpecificationsWithVotesToFirestore() async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+    try {
+      final sectionsRef =
+          firestore.collection('problemSpecifications').doc('sections');
+      final optionContentRef =
+          firestore.collection('problemSpecifications').doc('optionContent');
+
+      await sectionsRef.set({'sections': sectionsDatas});
+
+      final transformedOptionContent = optionsContent.map((key, value) {
+        final updatedOptions = value.map((option) {
+          return {
+            'option': option,
+            'upvotes': 0,
+            'downvotes': 0,
+          };
+        }).toList();
+
+        return MapEntry(key, updatedOptions);
+      });
+
+      await optionContentRef.set({'optionContent': transformedOptionContent});
+
+      print("Specifications with votes uploaded successfully to Firestore!");
+    } catch (e) {
+      print("Error uploading specifications: $e");
+    }
+  }
+
+ */
 
   Future<Map<String, dynamic>> fetchProblemSpecifications() async {
     final FirebaseFirestore firestore = FirebaseFirestore.instance;
@@ -89,9 +124,15 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
         'problemName': validProblemName,
       });
 
-      print("Invite sent to $email");
+      showToast(
+        message: "Invite sent to $email",
+        isError: false,
+      );
     } catch (e) {
-      print("Error sending invite: $e");
+      showToast(
+        message: "Error sending invite: $e",
+        isError: true,
+      );
       throw e;
     }
   }
