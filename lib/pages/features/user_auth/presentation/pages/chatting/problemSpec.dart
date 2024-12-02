@@ -13,47 +13,85 @@ Map<String, List<String>> generateSectionWords(
     final List<String> sectionWords = [];
     final int totalWordsNeeded = 5;
 
+    final List<Map<String, dynamic>> mostRelatable = [];
+    final List<Map<String, dynamic>> middleRelatable = [];
+    final List<Map<String, dynamic>> uncommon = [];
+
+    // Categorize options based on scores
+    for (final option in options) {
+      final List<Map<String, dynamic>> optionWords =
+          optionContent[option] ?? [];
+
+      for (final word in optionWords) {
+        final int score = word['upvotes'] - word['downvotes'];
+        if (score >= 50) {
+          mostRelatable.add(word);
+        } else if (score >= 20) {
+          middleRelatable.add(word);
+        } else {
+          uncommon.add(word);
+        }
+      }
+    }
+
+    List<String> pickRandomWords(
+        List<Map<String, dynamic>> source, int count, Set<String> usedWords) {
+      final List<String> pickedWords = [];
+      while (count > 0 && source.isNotEmpty) {
+        final randomIndex = random.nextInt(source.length);
+        final wordEntry = source.removeAt(randomIndex);
+        final word = wordEntry['option'] as String;
+
+        if (!usedWords.contains(word)) {
+          pickedWords.add(word);
+          usedWords.add(word);
+          count--;
+        }
+      }
+      return pickedWords;
+    }
+
     final Set<String> usedWords = {};
+    print("Most Relatable:");
+    mostRelatable.forEach((entry) {
+      print(
+          "Option: ${entry['option']}, Upvotes: ${entry['upvotes']}, Downvotes: ${entry['downvotes']}");
+    });
 
-    if (options.isNotEmpty) {
-      List<int> wordsPerOption =
-          List.filled(options.length, totalWordsNeeded ~/ options.length);
-      for (int i = 0; i < totalWordsNeeded % options.length; i++) {
-        wordsPerOption[i] += 1;
-      }
+    print("Middle Relatable:");
+    middleRelatable.forEach((entry) {
+      print(
+          "Option: ${entry['option']}, Upvotes: ${entry['upvotes']}, Downvotes: ${entry['downvotes']}");
+    });
 
-      for (int i = 0; i < options.length; i++) {
-        final option = options[i];
-        final List<Map<String, dynamic>> optionWords =
-            optionContent[option] ?? [];
+    print("Uncommon:");
+    uncommon.forEach((entry) {
+      print(
+          "Option: ${entry['option']}, Upvotes: ${entry['upvotes']}, Downvotes: ${entry['downvotes']}");
+    });
 
-        optionWords.sort((a, b) {
-          final upvotesDiff = b['upvotes'] - a['upvotes'];
-          if (upvotesDiff != 0) return upvotesDiff;
-          return a['downvotes'] - b['downvotes'];
-        });
+    // Pick words randomly from each category
+    sectionWords.addAll(pickRandomWords(mostRelatable, 2, usedWords));
+    sectionWords.addAll(pickRandomWords(middleRelatable, 2, usedWords));
+    sectionWords.addAll(pickRandomWords(uncommon, 1, usedWords));
 
-        final List<String> availableWords = optionWords
-            .map((entry) => entry['option'] as String)
-            .where((word) => !usedWords.contains(word))
-            .toList();
-
-        sectionWords.addAll(
-          List.generate(wordsPerOption[i], (_) {
-            if (availableWords.isEmpty) return "";
-            final word = availableWords[random.nextInt(availableWords.length)];
-            usedWords.add(word);
-            availableWords.remove(word);
-            return word;
-          }),
-        );
-      }
+    // If insufficient words, fill from lower categories
+    if (sectionWords.length < totalWordsNeeded) {
+      final int remaining = totalWordsNeeded - sectionWords.length;
+      sectionWords
+          .addAll(pickRandomWords(middleRelatable, remaining, usedWords));
+    }
+    if (sectionWords.length < totalWordsNeeded) {
+      final int remaining = totalWordsNeeded - sectionWords.length;
+      sectionWords.addAll(pickRandomWords(uncommon, remaining, usedWords));
     }
 
-    if (sectionWords.isNotEmpty) {
-      result[sectionTitle] =
-          sectionWords.where((word) => word.isNotEmpty).toList();
+    while (sectionWords.length < totalWordsNeeded) {
+      sectionWords.add("");
     }
+
+    result[sectionTitle] =
+        sectionWords.where((word) => word.isNotEmpty).toList();
   }
 
   return result;
