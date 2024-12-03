@@ -78,11 +78,13 @@ class _ChatPageState extends ConsumerState<ChatPage> {
 
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+      Future.delayed(Duration(milliseconds: 100), () {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      });
     }
   }
 
@@ -197,35 +199,43 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                         itemCount: chatModel.messages.length,
                         itemBuilder: (context, index) {
                           final message = chatModel.messages[index];
-                          final senderUsername =
-                              message['username'] ?? 'Unknown';
-                          final isCurrentUser =
-                              message['senderEmail'] == currentUserEmail;
+                          final senderEmail = message['senderEmail'] ??
+                              'Unknown'; // Use email as identity
+                          final isCurrentUser = senderEmail == currentUserEmail;
 
                           return Align(
                             alignment: isCurrentUser
                                 ? Alignment.centerRight
                                 : Alignment.centerLeft,
                             child: Column(
+                              crossAxisAlignment: isCurrentUser
+                                  ? CrossAxisAlignment.end
+                                  : CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  senderUsername,
+                                  senderEmail, // Display the email instead of username
                                   style: AppStyles.labelSmall(
                                     color: Theme.of(context).primaryColor,
                                   ),
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: isCurrentUser
-                                        ? Colors.blue[400]
-                                        : Colors.black45,
-                                    borderRadius: BorderRadius.circular(8),
+                                ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxWidth:
+                                        MediaQuery.of(context).size.width * 0.6,
                                   ),
-                                  child: Text(
-                                    message['message'],
-                                    style: AppStyles.titleSmall(
-                                      color: Theme.of(context).primaryColor,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: isCurrentUser
+                                          ? Colors.blue[400]
+                                          : Colors.black45,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      message['message'],
+                                      style: AppStyles.titleSmall(
+                                        color: Theme.of(context).primaryColor,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -283,7 +293,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             ),
             if (_showScrollToBottomButton)
               Positioned(
-                bottom: 70,
+                bottom: 130,
                 right: 20,
                 child: GestureDetector(
                   onTap: _scrollToBottom,

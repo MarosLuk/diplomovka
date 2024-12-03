@@ -46,10 +46,6 @@ class AppStyles {
     return const Color(0xFFD4D4D4);
   }
 
-  static Color typeWorkoutColor() {
-    return const Color(0xFF003A45);
-  }
-
   static Color grey20() {
     return const Color(0xFF686868);
   }

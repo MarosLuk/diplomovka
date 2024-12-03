@@ -30,6 +30,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       context: context,
       builder: (context) {
         return AlertDialog(
+          backgroundColor: AppStyles.Primary50(),
           title: Text('Invitation'),
           content: Text(
               'You have been invited to the problem "$problemName". Do you accept the invitation?'),
@@ -45,7 +46,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               onPressed: () => Navigator.of(context).pop(true),
               child: const Text(
                 'Accept',
-                style: TextStyle(color: Colors.green),
+                style: TextStyle(color: Colors.greenAccent),
               ),
             ),
           ],
