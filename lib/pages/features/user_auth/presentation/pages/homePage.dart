@@ -294,7 +294,11 @@ class _HomePageState extends ConsumerState<HomePage> {
 
                 await FirebaseAuth.instance.signOut();
 
-                Navigator.pushReplacementNamed(context, "/login");
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/login',
+                  (Route<dynamic> route) => false,
+                );
                 showToast(message: "Successfully signed out");
               },
             ),

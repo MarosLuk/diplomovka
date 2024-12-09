@@ -206,7 +206,20 @@ class _LoginPageState extends State<LoginPage> {
           SharedPreferences prefs = await SharedPreferences.getInstance();
           await prefs.setBool('rememberMe', true);
         }
-        Navigator.pushReplacementNamed(context, "/home");
+
+        if (email.endsWith("@admin.sk")) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            "/admin",
+            (Route<dynamic> route) => false,
+          );
+        } else {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            "/home",
+            (Route<dynamic> route) => false,
+          );
+        }
       } else {
         showToast(message: "Invalid email or password.");
       }

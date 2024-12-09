@@ -6,6 +6,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/homePage.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/signUpPage.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/loginPage.dart';
+import 'package:diplomovka/pages/features/user_auth/presentation/pages/admin/adminSearchPage.dart';
+import 'package:diplomovka/pages/features/user_auth/presentation/pages/admin/adminHomePage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
 import 'package:diplomovka/pages/features/app/global/toast.dart';
@@ -33,17 +35,34 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    _initializeFirebase();
+    _initializeFirebase(context);
   }
 
-  Future<void> _initializeFirebase() async {
+  Future<void> _initializeFirebase(BuildContext context) async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       bool rememberMe = prefs.getBool('rememberMe') ?? false;
+
+      User? currentUser = FirebaseAuth.instance.currentUser;
+
+      if (rememberMe && currentUser != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (currentUser.email != null &&
+              currentUser.email!.endsWith("@admin.sk")) {
+            // Navigate to admin page
+            Navigator.pushReplacementNamed(context, "/admin");
+          } else {
+            // Navigate to home page
+            Navigator.pushReplacementNamed(context, "/home");
+          }
+        });
+      }
+
       setState(() {
-        _isLoggedIn = rememberMe && FirebaseAuth.instance.currentUser != null;
+        _isLoggedIn = rememberMe && currentUser != null;
         _isFirebaseInitialized = true;
       });
+
       print("Firebase initialized successfully");
     } catch (e) {
       print("Error initializing Firebase: $e");
@@ -53,16 +72,6 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_isFirebaseInitialized) {
-      return const MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
-          ),
-        ),
-      );
-    }
-
     return AnimatedTheme(
       data: _isDarkMode ? _darkTheme() : _lightTheme(),
       duration: const Duration(milliseconds: 300),
@@ -75,12 +84,21 @@ class _MyAppState extends State<MyApp> {
                 theme: _lightTheme(),
                 darkTheme: _darkTheme(),
                 themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
-                initialRoute: _isLoggedIn ? '/home' : '/',
+                initialRoute: '/',
                 routes: {
-                  '/': (context) => const LoginPage(),
+                  '/': (context) {
+                    // Perform Firebase initialization after the MaterialApp is built
+                    if (!_isFirebaseInitialized) {
+                      _initializeFirebase(context);
+                    }
+
+                    return const LoginPage();
+                  },
                   '/home': (context) => const HomePage(),
                   '/login': (context) => const LoginPage(),
                   '/signUp': (context) => const SignUpPage(),
+                  "/admin": (context) => const AdminHomePage(),
+                  "/admin/search": (context) => const AdminSearchPage(),
                 },
               ),
             ),

@@ -164,6 +164,14 @@ class _SignUpPageState extends State<SignUpPage> {
     String email = _emailController.text;
     String password = _passwordController.text;
 
+    if (email.endsWith("@admin.sk")) {
+      setState(() {
+        isSigningUp = false;
+      });
+      showToast(message: "You can't create new admin", isError: true);
+      return;
+    }
+
     User? user = await _auth.signUpWithEmailAndPassword(email, password);
 
     setState(() {
