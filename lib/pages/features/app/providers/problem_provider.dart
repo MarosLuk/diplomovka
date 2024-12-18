@@ -6,6 +6,7 @@ import 'package:diplomovka/pages/features/app/providers/invitation_provider.dart
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/chatting/problemSpec.dart';
 import 'package:diplomovka/pages/features/app/global/toast.dart';
+import 'package:intl/intl.dart';
 
 class ProblemModel {
   String problemId;
@@ -40,6 +41,7 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
   }
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
 /*
   Future<void> uploadSpecificationsWithVotesToFirestore() async {
     final FirebaseFirestore firestore = FirebaseFirestore.instance;
@@ -186,9 +188,16 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
     }
   }
 
-  Future<String> createNewProblem(String problemName, String userId) async {
+  Future<String> createNewProblem(
+      String problemName, String problemDescription, String userId) async {
+    final now = DateTime.now();
+
+    final creationDateTime = DateFormat('dd.MM.yyyy-HH:mm').format(now);
+
     final newProblem = {
       'problemName': problemName,
+      'problemDescription': problemDescription,
+      'creationDateTime': creationDateTime,
       'userId': userId,
       'containers': [],
       'collaborators': [],
@@ -207,25 +216,43 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
     return problemRef.id;
   }
 
-  Future<String?> promptForProblemName(BuildContext context) async {
+  Future<Map<String, String>?> promptForProblemDetails(
+      BuildContext context) async {
     TextEditingController problemNameController = TextEditingController();
+    TextEditingController problemDescriptionController =
+        TextEditingController();
 
-    return await showDialog<String>(
+    return await showDialog<Map<String, String>>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: AppStyles.background(),
           title: Text(
-            'Enter problem name',
+            'Enter problem details',
             style: TextStyle(color: AppStyles.onBackground()),
           ),
-          content: TextField(
-            controller: problemNameController,
-            decoration: InputDecoration(
-              hintText: "Problem name",
-              hintStyle: TextStyle(color: Colors.grey),
-            ),
-            style: TextStyle(color: AppStyles.onBackground()),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: problemNameController,
+                decoration: InputDecoration(
+                  hintText: "Problem name",
+                  hintStyle: TextStyle(color: Colors.grey),
+                ),
+                style: TextStyle(color: AppStyles.onBackground()),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: problemDescriptionController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: "Problem description",
+                  hintStyle: TextStyle(color: Colors.grey),
+                ),
+                style: TextStyle(color: AppStyles.onBackground()),
+              ),
+            ],
           ),
           actions: <Widget>[
             TextButton(
@@ -237,7 +264,10 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
             TextButton(
               child: Text('Create'),
               onPressed: () {
-                Navigator.of(context).pop(problemNameController.text);
+                Navigator.of(context).pop({
+                  'name': problemNameController.text,
+                  'description': problemDescriptionController.text,
+                });
               },
             ),
           ],

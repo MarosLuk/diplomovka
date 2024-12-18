@@ -114,20 +114,18 @@ class _HomePageState extends ConsumerState<HomePage> {
               color: Theme.of(context).primaryColor,
             ),
             onPressed: () async {
-              /*await ref
+              final problemDetails = await ref
                   .read(problemProvider.notifier)
-                  .uploadSpecificationsWithVotesToFirestore();
+                  .promptForProblemDetails(context);
 
-               */
-              String? problemName = await ref
-                  .read(problemProvider.notifier)
-                  .promptForProblemName(context);
-              if (problemName != null &&
-                  problemName.isNotEmpty &&
+              if (problemDetails != null &&
+                  problemDetails['name']!.isNotEmpty &&
+                  problemDetails['description']!.isNotEmpty &&
                   user != null) {
                 String problemId = await ref
                     .read(problemProvider.notifier)
-                    .createNewProblem(problemName, user!.uid);
+                    .createNewProblem(problemDetails['name']!,
+                        problemDetails['description']!, user!.uid);
 
                 Navigator.push(
                   context,

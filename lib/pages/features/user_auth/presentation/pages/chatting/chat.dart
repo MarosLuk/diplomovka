@@ -285,7 +285,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                                   : CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  senderEmail, // Display the email instead of username
+                                  senderEmail,
+                                  // Display the email instead of username
                                   style: AppStyles.labelSmall(
                                     color: Theme.of(context).primaryColor,
                                   ),
