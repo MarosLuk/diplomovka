@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:diplomovka/assets/reusableComponents/reusableComponents.dart';
+import 'package:diplomovka/pages/features/user_auth/presentation/pages/chatting/problemSettingsPage.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -309,15 +310,17 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
         actions: [
           IconButton(
             icon: Icon(
-              Icons.person_add,
+              Icons.settings,
               color: AppStyles.onBackground(),
             ),
             onPressed: () {
-              ref.read(problemProvider.notifier).promptForInviteEmail(
-                    context,
-                    widget.problemId,
-                    problem.problemName,
-                  );
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      SettingsProblemPage(problemId: widget.problemId),
+                ),
+              );
             },
           ),
         ],
