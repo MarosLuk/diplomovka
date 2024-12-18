@@ -75,7 +75,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
           .doc(problemId)
           .update({field: newValue});
       showToast(message: "Updated successfully", isError: false);
-      _refreshProblemDetails(); // Refresh data
+      _refreshProblemDetails();
     } catch (e) {
       print("Error updating $field: $e");
       showToast(message: "Error updating $field: $e", isError: true);
@@ -89,7 +89,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
         'collaborators': FieldValue.arrayRemove([collaborator]),
       });
       showToast(message: "Collaborator deleted.", isError: false);
-      _refreshProblemDetails(); // Refresh data
+      _refreshProblemDetails();
     } catch (e) {
       print("Error removing collaborator: $e");
       showToast(message: "Error removing collaborator: $e", isError: true);
@@ -114,7 +114,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
             .update({'containers': containers});
 
         showToast(message: "Container deleted.", isError: false);
-        _refreshProblemDetails(); // Refresh data
+        _refreshProblemDetails();
       }
     } catch (e) {
       print("Error deleting container: $e");
