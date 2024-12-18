@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
 import 'package:diplomovka/pages/features/app/providers/problem_provider.dart';
+import 'package:diplomovka/pages/features/app/global/toast.dart';
 
 class SettingsProblemPage extends ConsumerStatefulWidget {
   final String problemId;
@@ -15,13 +17,34 @@ class SettingsProblemPage extends ConsumerStatefulWidget {
 }
 
 class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  bool _isEditingName = false;
+  bool _isEditingDescription = false;
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  Future<Map<String, dynamic>>? _problemDetailsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _problemDetailsFuture = _fetchProblemDetails(widget.problemId);
+  }
+
+  void _refreshProblemDetails() {
+    setState(() {
+      _problemDetailsFuture = _fetchProblemDetails(widget.problemId);
+    });
+  }
+
   Future<Map<String, dynamic>> _fetchProblemDetails(String problemId) async {
-    final docSnapshot = await FirebaseFirestore.instance
-        .collection('problems')
-        .doc(problemId)
-        .get();
+    final docSnapshot =
+        await _firestore.collection('problems').doc(problemId).get();
 
     if (!docSnapshot.exists) {
+      showToast(
+        message: "Problem not found",
+        isError: true,
+      );
       throw Exception("Problem not found");
     }
 
@@ -30,10 +53,8 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
 
   Future<String> _fetchOwnerEmail(String userId) async {
     try {
-      final userSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .get();
+      final userSnapshot =
+          await _firestore.collection('users').doc(userId).get();
 
       if (userSnapshot.exists) {
         return userSnapshot.data()?['email'] ?? 'Unknown Email';
@@ -46,8 +67,65 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
     }
   }
 
+  Future<void> _updateProblemField(
+      String problemId, String field, String newValue) async {
+    try {
+      await _firestore
+          .collection('problems')
+          .doc(problemId)
+          .update({field: newValue});
+      showToast(message: "Updated successfully", isError: false);
+      _refreshProblemDetails(); // Refresh data
+    } catch (e) {
+      print("Error updating $field: $e");
+      showToast(message: "Error updating $field: $e", isError: true);
+    }
+  }
+
+  Future<void> _removeCollaborator(
+      String problemId, String collaborator) async {
+    try {
+      await _firestore.collection('problems').doc(problemId).update({
+        'collaborators': FieldValue.arrayRemove([collaborator]),
+      });
+      showToast(message: "Collaborator deleted.", isError: false);
+      _refreshProblemDetails(); // Refresh data
+    } catch (e) {
+      print("Error removing collaborator: $e");
+      showToast(message: "Error removing collaborator: $e", isError: true);
+    }
+  }
+
+  Future<void> _deleteContainer(
+      String problemId, Map<String, dynamic> container) async {
+    try {
+      final containersSnapshot =
+          await _firestore.collection('problems').doc(problemId).get();
+
+      if (containersSnapshot.exists) {
+        final containers =
+            List<dynamic>.from(containersSnapshot.data()?['containers'] ?? []);
+        containers
+            .removeWhere((c) => c['containerId'] == container['containerId']);
+
+        await _firestore
+            .collection('problems')
+            .doc(problemId)
+            .update({'containers': containers});
+
+        showToast(message: "Container deleted.", isError: false);
+        _refreshProblemDetails(); // Refresh data
+      }
+    } catch (e) {
+      print("Error deleting container: $e");
+      showToast(message: "Error deleting container: $e", isError: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -56,7 +134,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
         ),
       ),
       body: FutureBuilder<Map<String, dynamic>>(
-        future: _fetchProblemDetails(widget.problemId),
+        future: _problemDetailsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -74,6 +152,11 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
               List<String>.from(problemData['collaborators'] ?? []);
           final containers =
               List<dynamic>.from(problemData['containers'] ?? []);
+          final isOwner = currentUser?.uid == problemData['userId'];
+
+          _nameController.text = problemData['problemName'];
+          _descriptionController.text =
+              problemData['problemDescription'] ?? 'No description';
 
           return FutureBuilder<String>(
             future: _fetchOwnerEmail(problemData['userId']),
@@ -112,25 +195,110 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        "Name: ${problemData['problemName']}",
+                        "Name:",
+                        style: AppStyles.titleSmall(
+                            color: AppStyles.onBackground()),
+                      ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _isEditingName
+                                ? TextField(
+                                    controller: _nameController,
+                                    decoration: InputDecoration(
+                                      labelText: 'Problem Name',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                  )
+                                : Text(
+                                    "${_nameController.text}",
+                                    style: AppStyles.bodyLarge(
+                                        color: AppStyles.onBackground()),
+                                  ),
+                          ),
+                          if (isOwner)
+                            IconButton(
+                              icon: Icon(
+                                _isEditingName ? Icons.check : Icons.edit,
+                                color: Colors.blue,
+                              ),
+                              onPressed: () {
+                                if (_isEditingName) {
+                                  _updateProblemField(widget.problemId,
+                                      'problemName', _nameController.text);
+                                }
+                                setState(() {
+                                  _isEditingName = !_isEditingName;
+                                });
+                              },
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        "Description:",
+                        style: AppStyles.titleSmall(
+                            color: AppStyles.onBackground()),
+                      ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _isEditingDescription
+                                ? TextField(
+                                    controller: _descriptionController,
+                                    decoration: InputDecoration(
+                                      labelText: 'Problem Description',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                  )
+                                : Text(
+                                    "${_descriptionController.text}",
+                                    style: AppStyles.bodyLarge(
+                                        color: AppStyles.onBackground()),
+                                  ),
+                          ),
+                          if (isOwner)
+                            IconButton(
+                              icon: Icon(
+                                _isEditingDescription
+                                    ? Icons.check
+                                    : Icons.edit,
+                                color: Colors.blue,
+                              ),
+                              onPressed: () {
+                                if (_isEditingDescription) {
+                                  _updateProblemField(
+                                      widget.problemId,
+                                      'problemDescription',
+                                      _descriptionController.text);
+                                }
+                                setState(() {
+                                  _isEditingDescription =
+                                      !_isEditingDescription;
+                                });
+                              },
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        "Created At:",
+                        style: AppStyles.titleSmall(
+                            color: AppStyles.onBackground()),
+                      ),
+                      Text(
+                        "${problemData['creationDateTime']}",
                         style: AppStyles.bodyLarge(
                             color: AppStyles.onBackground()),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 12),
                       Text(
-                        "Description: ${problemData['problemDescription'] ?? 'No description'}",
-                        style: AppStyles.bodyLarge(
+                        "Owner:",
+                        style: AppStyles.titleSmall(
                             color: AppStyles.onBackground()),
                       ),
-                      const SizedBox(height: 4),
                       Text(
-                        "Created At: ${problemData['creationDateTime']}",
-                        style: AppStyles.bodyLarge(
-                            color: AppStyles.onBackground()),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        "Owner: $ownerEmail",
+                        "$ownerEmail",
                         style: AppStyles.bodyLarge(
                             color: AppStyles.onBackground()),
                       ),
@@ -140,13 +308,21 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                         style: AppStyles.headLineSmall(
                             color: AppStyles.onBackground()),
                       ),
-                      ...collaborators.map((collaborator) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 2.0),
-                            child: Text(
-                              "- $collaborator",
-                              style: AppStyles.bodyLarge(
-                                  color: AppStyles.onBackground()),
-                            ),
+                      ...collaborators.map((collaborator) => Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                "- $collaborator",
+                                style: AppStyles.bodyLarge(
+                                    color: AppStyles.onBackground()),
+                              ),
+                              if (isOwner)
+                                IconButton(
+                                  icon: Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () => _removeCollaborator(
+                                      widget.problemId, collaborator),
+                                ),
+                            ],
                           )),
                       const SizedBox(height: 12),
                       Text(
@@ -155,13 +331,45 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                             color: AppStyles.onBackground()),
                       ),
                       ...containers.map(
-                        (container) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2.0),
-                          child: Text(
-                            "- ${container['containerName']}",
-                            style: AppStyles.bodyLarge(
-                                color: AppStyles.onBackground()),
-                          ),
+                        (container) => Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "- ${container['containerName']}",
+                              style: AppStyles.bodyLarge(
+                                  color: AppStyles.onBackground()),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.delete, color: Colors.red),
+                              onPressed: () async {
+                                final shouldDelete = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text("Delete Container"),
+                                    content: const Text(
+                                        "Are you sure you want to delete this container?"),
+                                    actions: [
+                                      TextButton(
+                                        child: const Text("Cancel"),
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(false),
+                                      ),
+                                      TextButton(
+                                        child: const Text("Delete"),
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(true),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (shouldDelete == true) {
+                                  await _deleteContainer(
+                                      widget.problemId, container);
+                                }
+                              },
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 32),

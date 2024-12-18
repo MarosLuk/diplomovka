@@ -244,7 +244,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                           invite['inviteId'],
                           invite['problemId'],
                           user!.email!);
-                      showToast(message: "Invitation accepted.");
+                      showToast(
+                          message: "Invitation accepted.", isError: false);
 
                       await ref
                           .read(problemProvider.notifier)
@@ -261,7 +262,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                       await ref
                           .read(inviteProvider.notifier)
                           .deleteInvite(invite['inviteId']);
-                      showToast(message: "Invitation declined.");
+                      showToast(
+                          message: "Invitation declined.", isError: false);
                     }
                   },
                 );
@@ -297,7 +299,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   '/login',
                   (Route<dynamic> route) => false,
                 );
-                showToast(message: "Successfully signed out");
+                showToast(message: "Successfully signed out", isError: false);
               },
             ),
           ],

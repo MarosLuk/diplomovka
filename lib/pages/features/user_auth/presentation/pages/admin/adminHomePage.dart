@@ -71,7 +71,7 @@ class AdminHomePage extends StatelessWidget {
                   (Route<dynamic> route) => false,
                 );
 
-                showToast(message: "Successfully signed out");
+                showToast(message: "Successfully signed out", isError: false);
               },
             ),
           ],

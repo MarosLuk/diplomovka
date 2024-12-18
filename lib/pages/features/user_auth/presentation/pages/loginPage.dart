@@ -221,13 +221,13 @@ class _LoginPageState extends State<LoginPage> {
           );
         }
       } else {
-        showToast(message: "Invalid email or password.");
+        showToast(message: "Invalid email or password.", isError: true);
       }
     } catch (e) {
       setState(() {
         _isSigning = false;
       });
-      showToast(message: "Error signing in: $e");
+      showToast(message: "Error signing in: $e", isError: true);
     }
   }
 
@@ -255,7 +255,7 @@ class _LoginPageState extends State<LoginPage> {
         Navigator.pushReplacementNamed(context, "/home");
       }
     } catch (e) {
-      showToast(message: "Some error occurred: $e");
+      showToastLong(message: "Some error occurred: $e", isError: true);
     }
   }
 }

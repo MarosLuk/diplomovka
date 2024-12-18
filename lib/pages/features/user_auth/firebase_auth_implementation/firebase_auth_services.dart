@@ -13,9 +13,10 @@ class FirebaseAuthService {
       return credential.user;
     } on FirebaseAuthException catch (e) {
       if (e.code == 'email-already-in-use') {
-        showToast(message: 'The email address is already in use.');
+        showToastLong(
+            message: 'The email address is already in use.', isError: true);
       } else {
-        showToast(message: 'An error occurred: ${e.code}');
+        showToastLong(message: 'An error occurred: ${e.code}', isError: true);
       }
     }
   }
@@ -30,9 +31,9 @@ class FirebaseAuthService {
     } on FirebaseAuthException catch (e) {
       print("Sign-in failed with error: ${e.code}");
       if (e.code == 'user-not-found' || e.code == 'wrong-password') {
-        showToast(message: 'Invalid email or password.');
+        showToastLong(message: 'Invalid email or password.', isError: true);
       } else {
-        showToast(message: 'An error occurred: ${e.code}');
+        showToastLong(message: 'An error occurred: ${e.code}', isError: true);
       }
       return null;
     }
@@ -45,8 +46,14 @@ class FirebaseAuthService {
       try {
         UserCredential userCredential = await auth.signInAnonymously();
         print("Signed in anonymously with UID: ${userCredential.user?.uid}");
+        showToastLong(
+            message:
+                'Signed in anonymously with UID: ${userCredential.user?.uid}',
+            isError: true);
       } catch (e) {
         print("Failed to sign in anonymously: $e");
+        showToastLong(
+            message: 'Failed to sign in anonymously: $e', isError: true);
       }
     }
   }

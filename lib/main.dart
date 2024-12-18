@@ -66,7 +66,7 @@ class _MyAppState extends State<MyApp> {
       print("Firebase initialized successfully");
     } catch (e) {
       print("Error initializing Firebase: $e");
-      showToast(message: "Error initializing Firebase: $e");
+      showToastLong(message: "Error initializing Firebase: $e", isError: true);
     }
   }
 

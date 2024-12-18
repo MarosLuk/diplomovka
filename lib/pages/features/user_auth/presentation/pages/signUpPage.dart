@@ -184,7 +184,7 @@ class _SignUpPageState extends State<SignUpPage> {
         'email': email,
       });
 
-      showToast(message: "User is successfully created");
+      showToast(message: "User is successfully created", isError: false);
       Navigator.pushReplacementNamed(context, "/login");
     } else {
       print("Error occured during signUP.");

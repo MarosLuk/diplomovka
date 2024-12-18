@@ -313,6 +313,7 @@ void showVoteDialog(BuildContext context, List<String> subsections,
                         showToast(
                           message:
                               "Votes updated: +$upvotesToAdd upvotes, +$downvotesToAdd downvotes for $option.",
+                          isError: false,
                         );
                         break;
                       }
@@ -430,7 +431,8 @@ void regenerateContainer(BuildContext context, String problemId,
 
     await problemRef.update({'containers': containers});
 
-    showToast(message: "Container name regenerated successfully!");
+    showToast(
+        message: "Container name regenerated successfully!", isError: false);
   } catch (e) {
     print("Error regenerating container: $e");
     showToast(message: "Failed to regenerate container: $e", isError: true);

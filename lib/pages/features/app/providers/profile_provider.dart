@@ -24,7 +24,7 @@ class ProfileNotifier extends StateNotifier<void> {
       }
     } catch (e) {
       print("Error fetching user data: $e");
-      showToast(message: "Error fetching user data");
+      showToastLong(message: "Error fetching user data", isError: true);
     }
     return {};
   }
@@ -40,7 +40,8 @@ class ProfileNotifier extends StateNotifier<void> {
           .get();
 
       if (emailCheck.docs.isNotEmpty && _user!.email != newEmail) {
-        showToast(message: "Email already exists in the database.");
+        showToastLong(
+            message: "Email already exists in the database.", isError: true);
         return;
       }
 
@@ -57,9 +58,9 @@ class ProfileNotifier extends StateNotifier<void> {
         'email': newEmail,
       });
 
-      showToast(message: "Profile updated successfully");
+      showToast(message: "Profile updated successfully", isError: false);
     } catch (e) {
-      showToast(message: "Error updating profile: $e");
+      showToastLong(message: "Error updating profile: $e", isError: true);
     }
   }
 }
