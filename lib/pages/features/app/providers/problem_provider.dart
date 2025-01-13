@@ -75,6 +75,66 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
   }
 
  */
+  Future<void> mergeContainers(
+    String problemId,
+    ContainerModel targetContainer,
+    ContainerModel draggedContainer,
+  ) async {
+    final problemDocRef = _firestore.collection('problems').doc(problemId);
+
+    await _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(problemDocRef);
+      if (!snapshot.exists) {
+        throw Exception("Problem does not exist");
+      }
+
+      List containers = snapshot.get('containers');
+      final targetIndex = containers
+          .indexWhere((c) => c['containerId'] == targetContainer.containerId);
+      final draggedIndex = containers
+          .indexWhere((c) => c['containerId'] == draggedContainer.containerId);
+
+      if (targetIndex == -1 || draggedIndex == -1) {
+        throw Exception("Containers not found in the problem data");
+      }
+
+      containers[targetIndex]['containerName'] =
+          "${targetContainer.containerName} + ${draggedContainer.containerName}";
+
+      containers.removeAt(draggedIndex);
+
+      transaction.update(problemDocRef, {
+        'containers': containers,
+      });
+    });
+
+    state = state.map((problem) {
+      if (problem.problemId == problemId) {
+        final updatedContainers = problem.containers
+            .where((c) => c.containerId != draggedContainer.containerId)
+            .map((c) {
+          if (c.containerId == targetContainer.containerId) {
+            return ContainerModel(
+              containerId: c.containerId,
+              containerName:
+                  "${targetContainer.containerName} + ${draggedContainer.containerName}",
+              messages: c.messages,
+            );
+          }
+
+          return c;
+        }).toList();
+
+        return ProblemModel(
+          problemId: problem.problemId,
+          problemName: problem.problemName,
+          containers: updatedContainers,
+          collaborators: problem.collaborators,
+        );
+      }
+      return problem;
+    }).toList();
+  }
 
   Future<Map<String, dynamic>> fetchProblemSpecifications() async {
     final FirebaseFirestore firestore = FirebaseFirestore.instance;

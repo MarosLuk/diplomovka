@@ -124,9 +124,13 @@ class ProblemPage extends ConsumerStatefulWidget {
 class _ProblemPageState extends ConsumerState<ProblemPage> {
   TextEditingController _containerNameController = TextEditingController();
 
+  @override
+  void initState() {
+    super.initState();
+  }
+
   void specificationBottomSheet(BuildContext context, WidgetRef ref) async {
     try {
-      // Fetch problem specifications from provider
       final fetchedData =
           await ref.read(problemProvider.notifier).fetchProblemSpecifications();
 
@@ -139,12 +143,10 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
         return;
       }
 
-      // Parse sectionsData to ensure correct type
       final sectionsData = (fetchedData['sectionsData'] as List)
           .map((e) => e as Map<String, dynamic>)
           .toList();
 
-      // Parse optionContent, no further transformations needed
       final optionContent =
           fetchedData['optionContent'] as Map<String, dynamic>;
 
@@ -281,21 +283,16 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
     }
   }
 
-  void initState() {
-    super.initState();
-
-    //uploadSpecificationsToFirestore();
-  }
-
   @override
   Widget build(BuildContext context) {
     final problem = ref.watch(problemProvider).firstWhere(
           (p) => p.problemId == widget.problemId,
           orElse: () => ProblemModel(
-              problemId: widget.problemId,
-              problemName: 'Unknown',
-              containers: [],
-              collaborators: []),
+            problemId: widget.problemId,
+            problemName: 'Unknown',
+            containers: [],
+            collaborators: [],
+          ),
         );
 
     return Scaffold(
@@ -335,75 +332,58 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
                   itemCount: problem.containers.length,
                   itemBuilder: (context, index) {
                     final container = problem.containers[index];
-                    return ListTile(
-                      title: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                              width: 2, color: AppStyles.onBackground()),
-                          borderRadius:
-                              const BorderRadius.all(Radius.circular(12)),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
+
+                    return Draggable<ContainerModel>(
+                      data: container,
+                      feedback: Material(
+                        color: Colors.transparent,
+                        child: Container(
+                          padding: const EdgeInsets.all(8.0),
+                          decoration: BoxDecoration(
+                            color: Colors.blueAccent.withOpacity(0.8),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           child: Text(
                             container.containerName,
-                            style: TextStyle(color: AppStyles.onBackground()),
+                            style: const TextStyle(color: Colors.white),
                           ),
                         ),
                       ),
-                      trailing: IconButton(
-                        icon: const Icon(
-                          Icons.refresh,
-                          color: Colors.white,
-                        ),
-                        onPressed: () {
-                          regenerateContainer(
-                            context,
-                            widget.problemId,
-                            container.containerId,
-                            container.containerName,
-                            ref,
+                      childWhenDragging: Opacity(
+                        opacity: 0.5,
+                        child: buildContainerTile(context, container),
+                      ),
+                      child: DragTarget<ContainerModel>(
+                        builder: (BuildContext context,
+                            List<ContainerModel?> candidateData,
+                            List<dynamic> rejectedData) {
+                          final isDraggingOver = candidateData.isNotEmpty;
+                          return Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                width: 2,
+                                color: isDraggingOver
+                                    ? Colors.green
+                                    : AppStyles.onBackground(),
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: buildContainerTile(context, container),
                           );
                         },
+                        onWillAccept: (draggedContainer) {
+                          if (draggedContainer == null) return false;
+                          return draggedContainer.containerId !=
+                              container.containerId;
+                        },
+                        onAccept: (draggedContainer) async {
+                          // Merge logic:
+                          await ref
+                              .read(problemProvider.notifier)
+                              .mergeContainers(widget.problemId, container,
+                                  draggedContainer);
+                        },
                       ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ChatPage(
-                              problemId: widget.problemId,
-                              chatId: container.containerId,
-                              containerName: container.containerName,
-                            ),
-                          ),
-                        );
-                      },
-                      onLongPress: () {
-                        final parts = container.containerName.split(": ");
-                        if (parts.length == 2) {
-                          final section = parts[0].trim();
-                          final option = parts[1].trim();
-
-                          final subsections = sectionToSubsections[section];
-                          if (subsections != null) {
-                            showVoteDialog(context, subsections, option, ref);
-                          } else {
-                            print("Section not found in mapping: $section");
-                            showToast(
-                              message: "Section not found in mapping: $section",
-                              isError: true,
-                            );
-                          }
-                        } else {
-                          print(
-                              "Invalid container name format: ${container.containerName}");
-                          showToast(
-                            message:
-                                "Invalid container name format: ${container.containerName}",
-                            isError: true,
-                          );
-                        }
-                      },
                     );
                   },
                 ),
@@ -427,13 +407,12 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
                               Icons.add,
                               color: AppStyles.onBackground(),
                             ),
-                            SizedBox(
-                              width: 4,
-                            ),
+                            SizedBox(width: 4),
                             Text(
                               "Add specification",
-                              style:
-                                  AppStyles.headLineSmall(color: Colors.white),
+                              style: AppStyles.headLineSmall(
+                                color: Colors.white,
+                              ),
                             ),
                           ],
                         ),
@@ -446,6 +425,67 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget buildContainerTile(BuildContext context, ContainerModel container) {
+    return ListTile(
+      title: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Text(
+          container.containerName,
+          style: TextStyle(color: AppStyles.onBackground()),
+        ),
+      ),
+      trailing: IconButton(
+        icon: const Icon(Icons.refresh, color: Colors.white),
+        onPressed: () {
+          regenerateContainer(
+            context,
+            widget.problemId,
+            container.containerId,
+            container.containerName,
+            ref,
+          );
+        },
+      ),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChatPage(
+              problemId: widget.problemId,
+              chatId: container.containerId,
+              containerName: container.containerName,
+            ),
+          ),
+        );
+      },
+      onLongPress: () {
+        final parts = container.containerName.split(": ");
+        if (parts.length == 2) {
+          final section = parts[0].trim();
+          final option = parts[1].trim();
+
+          final subsections = sectionToSubsections[section];
+          if (subsections != null) {
+            showVoteDialog(context, subsections, option, ref);
+          } else {
+            print("Section not found in mapping: $section");
+            showToast(
+              message: "Section not found in mapping: $section",
+              isError: true,
+            );
+          }
+        } else {
+          print("Invalid container name format: ${container.containerName}");
+          showToast(
+            message:
+                "Invalid container name format: ${container.containerName}",
+            isError: true,
+          );
+        }
+      },
     );
   }
 }
