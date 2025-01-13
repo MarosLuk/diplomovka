@@ -333,7 +333,7 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
                   itemBuilder: (context, index) {
                     final container = problem.containers[index];
 
-                    return Draggable<ContainerModel>(
+                    return LongPressDraggable<ContainerModel>(
                       data: container,
                       feedback: Material(
                         color: Colors.transparent,
@@ -359,6 +359,7 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
                             List<dynamic> rejectedData) {
                           final isDraggingOver = candidateData.isNotEmpty;
                           return Container(
+                            margin: const EdgeInsets.symmetric(vertical: 6.0),
                             decoration: BoxDecoration(
                               border: Border.all(
                                 width: 2,
@@ -377,7 +378,6 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
                               container.containerId;
                         },
                         onAccept: (draggedContainer) async {
-                          // Merge logic:
                           await ref
                               .read(problemProvider.notifier)
                               .mergeContainers(widget.problemId, container,
@@ -437,17 +437,52 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
           style: TextStyle(color: AppStyles.onBackground()),
         ),
       ),
-      trailing: IconButton(
-        icon: const Icon(Icons.refresh, color: Colors.white),
-        onPressed: () {
-          regenerateContainer(
-            context,
-            widget.problemId,
-            container.containerId,
-            container.containerName,
-            ref,
-          );
-        },
+      trailing: Row(
+        mainAxisSize: MainAxisSize
+            .min, // Ensures the Row takes up only the necessary space
+        children: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: () {
+              regenerateContainer(
+                context,
+                widget.problemId,
+                container.containerId,
+                container.containerName,
+                ref,
+              );
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.info_outline, color: AppStyles.Primary50()),
+            onPressed: () {
+              final parts = container.containerName.split(": ");
+              if (parts.length == 2) {
+                final section = parts[0].trim();
+                final option = parts[1].trim();
+
+                final subsections = sectionToSubsections[section];
+                if (subsections != null) {
+                  showVoteDialog(context, subsections, option, ref);
+                } else {
+                  print("Section not found in mapping: $section");
+                  showToast(
+                    message: "Section not found in mapping: $section",
+                    isError: true,
+                  );
+                }
+              } else {
+                print(
+                    "Invalid container name format: ${container.containerName}");
+                showToast(
+                  message:
+                      "Invalid container name format: ${container.containerName}",
+                  isError: true,
+                );
+              }
+            },
+          ),
+        ],
       ),
       onTap: () {
         Navigator.push(
@@ -460,31 +495,6 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
             ),
           ),
         );
-      },
-      onLongPress: () {
-        final parts = container.containerName.split(": ");
-        if (parts.length == 2) {
-          final section = parts[0].trim();
-          final option = parts[1].trim();
-
-          final subsections = sectionToSubsections[section];
-          if (subsections != null) {
-            showVoteDialog(context, subsections, option, ref);
-          } else {
-            print("Section not found in mapping: $section");
-            showToast(
-              message: "Section not found in mapping: $section",
-              isError: true,
-            );
-          }
-        } else {
-          print("Invalid container name format: ${container.containerName}");
-          showToast(
-            message:
-                "Invalid container name format: ${container.containerName}",
-            isError: true,
-          );
-        }
       },
     );
   }
