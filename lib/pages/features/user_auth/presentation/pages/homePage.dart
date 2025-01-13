@@ -13,6 +13,7 @@ import 'dart:async';
 import 'package:diplomovka/pages/features/app/providers/problem_provider.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/chatting/problemPage.dart';
 import 'package:diplomovka/pages/features/app/providers/problem_provider.dart';
+import 'package:diplomovka/pages/features/user_auth/presentation/pages/GPT_Page.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -166,6 +167,29 @@ class _HomePageState extends ConsumerState<HomePage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => ProfilePage(),
+                  ),
+                );
+
+                if (updatedUsername != null && updatedUsername is String) {
+                  ref
+                      .read(usernameProvider.notifier)
+                      .updateUsername(updatedUsername);
+                }
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.person,
+                  color: Theme.of(context).colorScheme.primary),
+              title: Text(
+                'GPT',
+                style: AppStyles.labelMedium(
+                    color: Theme.of(context).colorScheme.primary),
+              ),
+              onTap: () async {
+                final updatedUsername = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const GPTPage(),
                   ),
                 );
 

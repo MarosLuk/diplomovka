@@ -1,0 +1,2 @@
+const String APIkey_GPT =
+    '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';
