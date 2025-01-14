@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
@@ -23,6 +24,11 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   Future<Map<String, dynamic>>? _problemDetailsFuture;
+
+  final ValueNotifier<bool> _isVerifiedTerms = ValueNotifier(false);
+  final ValueNotifier<bool> _isSpilledHat = ValueNotifier(false);
+  final ValueNotifier<bool> _isSolutionDomain = ValueNotifier(false);
+  final ValueNotifier<double> _sliderValue = ValueNotifier(5);
 
   @override
   void initState() {
@@ -48,7 +54,15 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
       throw Exception("Problem not found");
     }
 
-    return docSnapshot.data()!;
+    final data = docSnapshot.data()!;
+
+    // Set the initial values for switches and slider
+    _isVerifiedTerms.value = data['isVerifiedTerms'] ?? false;
+    _isSpilledHat.value = data['isSpilledHat'] ?? false;
+    _isSolutionDomain.value = data['isSolutionDomain'] ?? false;
+    _sliderValue.value = (data['sliderValue'] ?? 5).toDouble();
+
+    return data;
   }
 
   Future<String> _fetchOwnerEmail(String userId) async {
@@ -76,6 +90,20 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
           .update({field: newValue});
       showToast(message: "Updated successfully", isError: false);
       _refreshProblemDetails();
+    } catch (e) {
+      print("Error updating $field: $e");
+      showToast(message: "Error updating $field: $e", isError: true);
+    }
+  }
+
+  Future<void> _updateProblemFieldSettings(
+      String problemId, String field, dynamic newValue) async {
+    try {
+      await _firestore
+          .collection('problems')
+          .doc(problemId)
+          .update({field: newValue});
+      showToast(message: "Updated successfully", isError: false);
     } catch (e) {
       print("Error updating $field: $e");
       showToast(message: "Error updating $field: $e", isError: true);
@@ -188,6 +216,69 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                         ),
                       ),
                       const SizedBox(height: 12),
+                      Text(
+                        "Inspiration settings",
+                        style: AppStyles.headLineSmall(
+                            color: AppStyles.onBackground()),
+                      ),
+                      const SizedBox(height: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSwitch(
+                            label: "Create content: verified terms / GPT",
+                            valueNotifier: _isVerifiedTerms,
+                            firestoreField: 'isVerifiedTerms',
+                          ),
+                          _buildSwitch(
+                            label: "Spilled / non-spilled hat",
+                            valueNotifier: _isSpilledHat,
+                            firestoreField: 'isSpilledHat',
+                          ),
+                          _buildSwitch(
+                            label: "Solution / Application domain",
+                            valueNotifier: _isSolutionDomain,
+                            firestoreField: 'isSolutionDomain',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ValueListenableBuilder<double>(
+                            valueListenable: _sliderValue,
+                            builder: (context, value, child) {
+                              return Text(
+                                "How many words to generate (1-10): $value",
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
+                              );
+                            },
+                          ),
+                          ValueListenableBuilder<double>(
+                            valueListenable: _sliderValue,
+                            builder: (context, value, child) {
+                              return Slider(
+                                value: value,
+                                min: 1,
+                                max: 10,
+                                divisions: 9,
+                                label: value.round().toString(),
+                                onChanged: (double newValue) async {
+                                  _sliderValue.value = newValue;
+                                  // Update Firestore with the new slider value
+                                  await _updateProblemFieldSettings(
+                                      widget.problemId,
+                                      'sliderValue',
+                                      newValue);
+                                },
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
                       Text(
                         "Problem Details",
                         style: AppStyles.headLineSmall(
@@ -334,10 +425,14 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                         (container) => Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              "- ${container['containerName']}",
-                              style: AppStyles.bodyLarge(
-                                  color: AppStyles.onBackground()),
+                            Flexible(
+                              child: Text(
+                                softWrap: true,
+                                overflow: TextOverflow.visible,
+                                "- ${container['containerName']}",
+                                style: AppStyles.bodyLarge(
+                                    color: AppStyles.onBackground()),
+                              ),
                             ),
                             IconButton(
                               icon: Icon(Icons.delete, color: Colors.red),
@@ -345,6 +440,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                                 final shouldDelete = await showDialog<bool>(
                                   context: context,
                                   builder: (context) => AlertDialog(
+                                    backgroundColor: AppStyles.Primary50(),
                                     title: const Text("Delete Container"),
                                     content: const Text(
                                         "Are you sure you want to delete this container?"),
@@ -381,6 +477,33 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildSwitch({
+    required String label,
+    required ValueNotifier<bool> valueNotifier,
+    required String firestoreField, // Add Firestore field name
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label),
+        ValueListenableBuilder<bool>(
+          valueListenable: valueNotifier,
+          builder: (context, value, child) {
+            return CupertinoSwitch(
+              value: value,
+              onChanged: (bool newValue) async {
+                valueNotifier.value = newValue;
+                // Update Firestore with the new value
+                await _updateProblemFieldSettings(
+                    widget.problemId, firestoreField, newValue);
+              },
+            );
+          },
+        ),
+      ],
     );
   }
 }

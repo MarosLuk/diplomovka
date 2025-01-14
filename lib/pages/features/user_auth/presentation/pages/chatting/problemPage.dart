@@ -409,7 +409,7 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
                             ),
                             SizedBox(width: 4),
                             Text(
-                              "Add specification",
+                              "Inspiration",
                               style: AppStyles.headLineSmall(
                                 color: Colors.white,
                               ),

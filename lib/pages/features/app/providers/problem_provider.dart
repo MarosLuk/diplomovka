@@ -261,6 +261,10 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
       'userId': userId,
       'containers': [],
       'collaborators': [],
+      'isVerifiedTerms': false,
+      'isSpilledHat': false,
+      'isSolutionDomain': false,
+      'sliderValue': 5.0
     };
 
     final problemRef = await _firestore.collection('problems').add(newProblem);
