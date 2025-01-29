@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
 import 'package:diplomovka/pages/features/app/global/toast.dart';
+import 'package:diplomovka/pages/features/app/providers/GPT_provider.dart';
+import 'package:diplomovka/pages/features/user_auth/API_keys/GPT_key.dart';
 
 Future<Map<String, List<String>>> generateSectionWords(
   List<Map<String, dynamic>> sectionsData,
@@ -13,7 +15,7 @@ Future<Map<String, List<String>>> generateSectionWords(
   final Random random = Random();
   final Map<String, List<String>> result = {};
 
-  // 1) Fetch problem settings from Firestore
+  // 🔹 Fetch problem settings from Firestore
   final firestore = FirebaseFirestore.instance;
   final problemSnapshot =
       await firestore.collection('problems').doc(problemId).get();
@@ -29,134 +31,138 @@ Future<Map<String, List<String>>> generateSectionWords(
   print("Firestore Settings: sliderValue=$totalWordsNeeded, "
       "isSolutionDomain=$isSolutionDomain, isVerifiedTerms=$isVerifiedTerms");
 
-  final optionContentDoc = await firestore
-      .collection('problemSpecifications')
-      .doc('optionContent')
-      .get();
-  if (!optionContentDoc.exists) {
-    throw Exception("optionContent document does not exist in Firestore!");
+  Map<String, dynamic> allOptionContent = {};
+
+  // 🔹 Fetch optionContent from Firestore **only if NOT using GPT**
+  if (!isVerifiedTerms) {
+    final optionContentDoc = await firestore
+        .collection('problemSpecifications')
+        .doc('optionContent')
+        .get();
+
+    if (!optionContentDoc.exists) {
+      throw Exception("optionContent document does not exist in Firestore!");
+    }
+
+    final data = optionContentDoc.data();
+    if (data == null || !data.containsKey('optionContent')) {
+      throw Exception("'optionContent' field is missing or null in Firestore!");
+    }
+
+    allOptionContent = data['optionContent'] as Map<String, dynamic>;
   }
 
-  final data = optionContentDoc.data() as Map<String, dynamic>?;
-  if (data == null || !data.containsKey('optionContent')) {
-    throw Exception("'optionContent' field is missing or null in Firestore!");
+  // 🔹 **Call GPT once to get exactly `totalWordsNeeded` words**
+  List<String> gptGeneratedWords = [];
+  if (isVerifiedTerms) {
+    gptGeneratedWords = await fetchWordsFromGPT(
+        selectedOptions, totalWordsNeeded, isSolutionDomain);
   }
-  final allOptionContent = data['optionContent'] as Map<String, dynamic>;
 
-  // 4) Generate words for each section
+  // 🔹 Generate words for each section
   for (final section in sectionsData) {
     final sectionTitle = section["title"];
     final List<String> options = selectedOptions[sectionTitle] ?? [];
     final List<String> sectionWords = [];
 
-    final List<Map<String, dynamic>> mostRelatable = [];
-    final List<Map<String, dynamic>> middleRelatable = [];
-    final List<Map<String, dynamic>> uncommon = [];
-
-    // For each selected "option" key
-    for (final optionKey in options) {
-      if (!allOptionContent.containsKey(optionKey)) {
-        print("No optionContent found for: $optionKey");
-        continue;
+    if (isVerifiedTerms) {
+      // 🔹 **Distribute GPT words across sections**
+      if (gptGeneratedWords.isNotEmpty) {
+        int wordsPerSection =
+            (totalWordsNeeded / selectedOptions.length).ceil();
+        sectionWords.addAll(gptGeneratedWords.take(wordsPerSection).toList());
+        gptGeneratedWords.removeRange(
+            0, wordsPerSection.clamp(0, gptGeneratedWords.length));
       }
-      final rawList = allOptionContent[optionKey];
-      if (rawList is! List) {
-        print("'$optionKey' is not a List in Firestore!");
-        continue;
-      }
+    } else {
+      // 🔹 Otherwise, fetch words from Firestore
+      final List<Map<String, dynamic>> mostRelatable = [];
+      final List<Map<String, dynamic>> middleRelatable = [];
+      final List<Map<String, dynamic>> uncommon = [];
 
-      // Convert each item to Map<String, dynamic>, filter by domainType
-      final optionMaps = rawList
-          .where((item) => item is Map<String, dynamic>)
-          .map((item) => item as Map<String, dynamic>)
-          .toList();
-
-      for (final wordMap in optionMaps) {
-        final String? domainType = wordMap['domainType'];
-        final String? wordText = wordMap['option'];
-
-        if (wordText == null) {
-          print("option text is missing. Skipping...");
+      for (final optionKey in options) {
+        if (!allOptionContent.containsKey(optionKey)) {
+          print("No optionContent found for: $optionKey");
           continue;
         }
-        if (domainType == null) {
-          print("domainType is null for: $wordText. Skipping or fallback...");
+        final rawList = allOptionContent[optionKey];
+        if (rawList is! List) {
+          print("'$optionKey' is not a List in Firestore!");
           continue;
         }
 
-        // Filter: solution vs application
-        final bool matchesDomain =
-            (isSolutionDomain && domainType == 'solution') ||
-                (!isSolutionDomain && domainType == 'application');
-        if (matchesDomain) {
-          final int up = wordMap['upvotes'] ?? 0;
-          final int down = wordMap['downvotes'] ?? 0;
-          final int score = up - down;
+        final optionMaps = rawList
+            .where((item) => item is Map<String, dynamic>)
+            .map((item) => item as Map<String, dynamic>)
+            .toList();
 
-          if (score >= 50) {
-            mostRelatable.add(wordMap);
-          } else if (score >= 20) {
-            middleRelatable.add(wordMap);
-          } else {
-            uncommon.add(wordMap);
+        for (final wordMap in optionMaps) {
+          final String? domainType = wordMap['domainType'];
+          final String? wordText = wordMap['option'];
+
+          if (wordText == null || domainType == null) {
+            continue;
+          }
+
+          // 🔹 Filter by solution/application
+          final bool matchesDomain =
+              (isSolutionDomain && domainType == 'solution') ||
+                  (!isSolutionDomain && domainType == 'application');
+
+          if (matchesDomain) {
+            final int up = wordMap['upvotes'] ?? 0;
+            final int down = wordMap['downvotes'] ?? 0;
+            final int score = up - down;
+
+            if (score >= 50) {
+              mostRelatable.add(wordMap);
+            } else if (score >= 20) {
+              middleRelatable.add(wordMap);
+            } else {
+              uncommon.add(wordMap);
+            }
           }
         }
       }
-    }
 
-    List<String> pickRandomWords(
-      List<Map<String, dynamic>> source,
-      int count,
-      Set<String> usedWords,
-    ) {
-      final picked = <String>[];
-      final tempList = List<Map<String, dynamic>>.from(source);
-      while (count > 0 && tempList.isNotEmpty) {
-        final randomIndex = random.nextInt(tempList.length);
-        final wordEntry = tempList.removeAt(randomIndex);
-        final word = wordEntry['option'] as String;
-        if (!usedWords.contains(word)) {
-          picked.add(word);
-          usedWords.add(word);
-          count--;
+      List<String> pickRandomWords(
+        List<Map<String, dynamic>> source,
+        int count,
+        Set<String> usedWords,
+      ) {
+        final picked = <String>[];
+        final tempList = List<Map<String, dynamic>>.from(source);
+        while (count > 0 && tempList.isNotEmpty) {
+          final randomIndex = random.nextInt(tempList.length);
+          final wordEntry = tempList.removeAt(randomIndex);
+          final word = wordEntry['option'] as String;
+          if (!usedWords.contains(word)) {
+            picked.add(word);
+            usedWords.add(word);
+            count--;
+          }
         }
+        return picked;
       }
-      return picked;
-    }
 
-    final usedWords = <String>{};
+      final usedWords = <String>{};
 
-    print("Filtered Words for DomainType "
-        "[${isSolutionDomain ? 'solution' : 'application'}]:\n"
-        "  Most Relatable: $mostRelatable\n"
-        "  Middle Relatable: $middleRelatable\n"
-        "  Uncommon: $uncommon");
-
-    // If isVerifiedTerms => fetch from GPT; else do fallback-based picking
-    if (isVerifiedTerms) {
-      final gptWords = await fetchWordsFromGPT(sectionTitle, totalWordsNeeded);
-      sectionWords.addAll(gptWords);
-    } else {
       int needed = totalWordsNeeded;
 
-      // 1) Pick from mostRelatable
       final pickedFromMost =
           pickRandomWords(mostRelatable, needed ~/ 2, usedWords);
       sectionWords.addAll(pickedFromMost);
       needed -= pickedFromMost.length;
 
-      // 2) Pick from middleRelatable
       final pickedFromMiddle =
           pickRandomWords(middleRelatable, needed ~/ 2, usedWords);
       sectionWords.addAll(pickedFromMiddle);
       needed -= pickedFromMiddle.length;
 
-      // 3) Pick from uncommon
       final pickedFromUncommon = pickRandomWords(uncommon, needed, usedWords);
       sectionWords.addAll(pickedFromUncommon);
       needed -= pickedFromUncommon.length;
 
-      // 4) If still fewer than totalWordsNeeded, fill placeholders
       while (sectionWords.length < totalWordsNeeded) {
         sectionWords.add("");
       }
@@ -169,10 +175,26 @@ Future<Map<String, List<String>>> generateSectionWords(
   return result;
 }
 
-// Placeholder function for GPT API integration
-Future<List<String>> fetchWordsFromGPT(String section, int count) async {
-  // TODO: Implement GPT API call here
-  return List.generate(count, (index) => "GeneratedWord$index");
+Future<List<String>> fetchWordsFromGPT(
+    Map<String, List<String>> selectedOptions,
+    int sliderValue,
+    bool isSolutionDomain) async {
+  final OpenAIService openAIService = OpenAIService(APIkey_GPT);
+
+  final String gptResponse = await openAIService.getChatGPTReply(
+    selectedOptionsGroupedBySections: selectedOptions,
+    numberOfWords: sliderValue,
+    isSolutionDomain: isSolutionDomain,
+  );
+
+  print("🔹 GPT Response: $gptResponse");
+
+  // ✅ Split response into individual words
+  return gptResponse
+      .split("\n")
+      .where((word) => word.isNotEmpty)
+      .take(sliderValue)
+      .toList();
 }
 
 final Map<String, List<String>> sectionToSubsections = {

@@ -64,31 +64,6 @@ class SelectionNotifier extends StateNotifier<Map<String, bool>> {
         throw Exception("Invalid format for unwrapped optionContent");
       }
 
-      final optionContent = unwrappedOptionContent.map((key, value) {
-        if (value is List) {
-          final processedList = value.map((entry) {
-            if (entry is Map<String, dynamic> &&
-                entry.containsKey('option') &&
-                entry.containsKey('upvotes') &&
-                entry.containsKey('downvotes')) {
-              return {
-                'option': entry['option'] as String,
-                'upvotes': entry['upvotes'] as int,
-                'downvotes': entry['downvotes'] as int,
-              };
-            } else {
-              throw Exception(
-                  "Invalid entry format in optionContent for key $key: $entry");
-            }
-          }).toList();
-
-          return MapEntry(key, processedList);
-        } else {
-          throw Exception(
-              "Invalid value type in optionContent for key: $key, value: $value");
-        }
-      });
-
       final generatedWords =
           await generateSectionWords(sections, selectedGrouped, problemId);
 

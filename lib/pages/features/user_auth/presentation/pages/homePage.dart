@@ -183,6 +183,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 }
               },
             ),
+            /*
             ListTile(
               leading: Icon(Icons.person,
                   color: Theme.of(context).colorScheme.primary),
@@ -206,6 +207,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                 }
               },
             ),
+
+             */
             ExpansionTile(
               leading: Icon(
                 Icons.assignment,
