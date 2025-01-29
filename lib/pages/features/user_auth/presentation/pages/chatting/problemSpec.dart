@@ -52,8 +52,9 @@ Future<Map<String, List<String>>> generateSectionWords(
     allOptionContent = data['optionContent'] as Map<String, dynamic>;
   }
 
-  // 🔹 **Call GPT once to get exactly `totalWordsNeeded` words**
-  List<String> gptGeneratedWords = [];
+  // 🔹 Call GPT once to get exactly `totalWordsNeeded` words
+  Map<String, List<String>> gptGeneratedWords = {};
+
   if (isVerifiedTerms) {
     gptGeneratedWords = await fetchWordsFromGPT(
         selectedOptions, totalWordsNeeded, isSolutionDomain);
@@ -63,17 +64,11 @@ Future<Map<String, List<String>>> generateSectionWords(
   for (final section in sectionsData) {
     final sectionTitle = section["title"];
     final List<String> options = selectedOptions[sectionTitle] ?? [];
-    final List<String> sectionWords = [];
+    final List<String> sectionWords = []; // ✅ Declare it properly here
 
     if (isVerifiedTerms) {
-      // 🔹 **Distribute GPT words across sections**
-      if (gptGeneratedWords.isNotEmpty) {
-        int wordsPerSection =
-            (totalWordsNeeded / selectedOptions.length).ceil();
-        sectionWords.addAll(gptGeneratedWords.take(wordsPerSection).toList());
-        gptGeneratedWords.removeRange(
-            0, wordsPerSection.clamp(0, gptGeneratedWords.length));
-      }
+      // 🔹 **Assign GPT words to each section**
+      sectionWords.addAll(gptGeneratedWords[sectionTitle] ?? []);
     } else {
       // 🔹 Otherwise, fetch words from Firestore
       final List<Map<String, dynamic>> mostRelatable = [];
@@ -175,10 +170,11 @@ Future<Map<String, List<String>>> generateSectionWords(
   return result;
 }
 
-Future<List<String>> fetchWordsFromGPT(
-    Map<String, List<String>> selectedOptions,
-    int sliderValue,
-    bool isSolutionDomain) async {
+Future<Map<String, List<String>>> fetchWordsFromGPT(
+  Map<String, List<String>> selectedOptions,
+  int sliderValue,
+  bool isSolutionDomain,
+) async {
   final OpenAIService openAIService = OpenAIService(APIkey_GPT);
 
   final String gptResponse = await openAIService.getChatGPTReply(
@@ -189,12 +185,20 @@ Future<List<String>> fetchWordsFromGPT(
 
   print("🔹 GPT Response: $gptResponse");
 
-  // ✅ Split response into individual words
-  return gptResponse
-      .split("\n")
-      .where((word) => word.isNotEmpty)
-      .take(sliderValue)
-      .toList();
+  final List<String> words =
+      gptResponse.split("\n").where((word) => word.isNotEmpty).toList();
+
+  // ✅ Distribute words across selected sections
+  final Map<String, List<String>> sectionWords = {};
+  final sectionKeys = selectedOptions.keys.toList();
+
+  for (int i = 0; i < words.length; i++) {
+    final section = sectionKeys[
+        i % sectionKeys.length]; // Assign words cyclically to sections
+    sectionWords.putIfAbsent(section, () => []).add(words[i]);
+  }
+
+  return sectionWords;
 }
 
 final Map<String, List<String>> sectionToSubsections = {

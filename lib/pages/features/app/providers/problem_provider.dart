@@ -384,8 +384,8 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
     );
   }
 
-  Future<void> addContainersToProblem(
-      String problemId, Map<String, List<String>> wordsBySection) async {
+  Future<void> addContainersToProblem(String problemId,
+      Map<String, List<String>> wordsBySection, bool generatedByAI) async {
     final problemDocRef = _firestore.collection('problems').doc(problemId);
 
     await _firestore.runTransaction((transaction) async {
@@ -400,23 +400,20 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
         for (String word in words) {
           // Generate a unique ID for each container
           String containerId = _firestore.collection('problems').doc().id;
-
-          // Create the container object
           final newContainer = {
             'containerId': containerId,
-            'containerName': "$section: $word", // Include section in the name
+            'containerName': "$section: $word",
             'messages': [],
+            'generatedBy': generatedByAI ? 'AI' : 'Manual',
           };
 
-          containers.add(newContainer); // Add the container to the list
+          containers.add(newContainer);
         }
       });
 
       // Update the containers in Firestore
       transaction.update(problemDocRef, {'containers': containers});
     });
-
-    // Optionally, update the local state here if necessary
   }
 
   void clearState() {

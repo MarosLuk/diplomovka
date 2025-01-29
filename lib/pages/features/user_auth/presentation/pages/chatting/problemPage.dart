@@ -49,6 +49,19 @@ class SelectionNotifier extends StateNotifier<Map<String, bool>> {
     return selectedGroupedBySections;
   }
 
+  Future<bool> checkIfUsingGPT(String problemId) async {
+    final firestore = FirebaseFirestore.instance;
+    final problemSnapshot =
+        await firestore.collection('problems').doc(problemId).get();
+
+    if (!problemSnapshot.exists) {
+      throw Exception("Problem settings not found.");
+    }
+
+    final problemData = problemSnapshot.data() as Map<String, dynamic>;
+    return problemData['isVerifiedTerms'] ?? false;
+  }
+
   void saveSelections(
       WidgetRef ref,
       BuildContext context,
@@ -64,12 +77,16 @@ class SelectionNotifier extends StateNotifier<Map<String, bool>> {
         throw Exception("Invalid format for unwrapped optionContent");
       }
 
+      // ✅ Generate words and check if AI was used
+      final bool isGPTGenerated = await checkIfUsingGPT(problemId);
       final generatedWords =
           await generateSectionWords(sections, selectedGrouped, problemId);
 
+      // ✅ Pass the AI status when adding containers
       await ref
           .read(problemProvider.notifier)
-          .addContainersToProblem(problemId, generatedWords);
+          .addContainersToProblem(problemId, generatedWords, isGPTGenerated);
+
       Navigator.of(context).pop();
       clearSelections();
     } catch (e) {
