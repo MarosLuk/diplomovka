@@ -41,7 +41,6 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
   }
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
 /*
   Future<void> uploadSpecificationsWithVotesToFirestore() async {
     final FirebaseFirestore firestore = FirebaseFirestore.instance;
@@ -55,11 +54,12 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
       await sectionsRef.set({'sections': sectionsDatas});
 
       final transformedOptionContent = optionsContent.map((key, value) {
-        final updatedOptions = value.map((option) {
+        final updatedOptions = value.map((Map<String, dynamic> option) {
           return {
-            'option': option,
-            'upvotes': 0,
-            'downvotes': 0,
+            'option': option['option'],
+            'upvotes': option['upvotes'] as int,
+            'downvotes': option['downvotes'] as int,
+            'domainType': option['domainType'],
           };
         }).toList();
 
@@ -75,6 +75,7 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
   }
 
  */
+
   Future<void> mergeContainers(
     String problemId,
     ContainerModel targetContainer,

@@ -59,7 +59,13 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   void initState() {
     super.initState();
+    /*
+    ref
+        .read(problemProvider.notifier)
+        .uploadSpecificationsWithVotesToFirestore();
 
+
+     */
     if (user != null) {
       ref.read(problemProvider.notifier).fetchProblems(user!.uid, user!.email!);
 
@@ -352,7 +358,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                "Welcome to Home",
+                "Welcome",
                 style: AppStyles.headLineLarge(
                     color: Theme.of(context).primaryColor),
               ),

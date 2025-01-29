@@ -236,7 +236,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                             firestoreField: 'isSpilledHat',
                           ),
                           _buildSwitch(
-                            label: "Solution / Application domain",
+                            label: "Application domain / Solution",
                             valueNotifier: _isSolutionDomain,
                             firestoreField: 'isSolutionDomain',
                           ),

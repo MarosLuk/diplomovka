@@ -90,12 +90,11 @@ class SelectionNotifier extends StateNotifier<Map<String, bool>> {
       });
 
       final generatedWords =
-          generateSectionWords(sections, selectedGrouped, optionContent);
+          await generateSectionWords(sections, selectedGrouped, problemId);
 
       await ref
           .read(problemProvider.notifier)
           .addContainersToProblem(problemId, generatedWords);
-
       Navigator.of(context).pop();
       clearSelections();
     } catch (e) {
