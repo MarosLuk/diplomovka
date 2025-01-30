@@ -384,8 +384,7 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
     );
   }
 
-  Future<void> addContainersToProblem(String problemId,
-      Map<String, List<String>> wordsBySection, bool generatedByAI) async {
+  Future<void> deleteContainer(String problemId, String containerId) async {
     final problemDocRef = _firestore.collection('problems').doc(problemId);
 
     await _firestore.runTransaction((transaction) async {
@@ -396,22 +395,53 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
 
       List<dynamic> containers = snapshot.get('containers') ?? [];
 
+      // Remove container by ID
+      containers.removeWhere((c) => c['containerId'] == containerId);
+
+      // Update Firestore with the modified containers list
+      transaction.update(problemDocRef, {'containers': containers});
+    });
+  }
+
+  Future<void> addContainersToProblem(String problemId,
+      Map<String, List<String>> wordsBySection, int generationType) async {
+    final problemDocRef = _firestore.collection('problems').doc(problemId);
+
+    await _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(problemDocRef);
+      if (!snapshot.exists) {
+        throw Exception("Problem does not exist");
+      }
+
+      List<dynamic> containers = snapshot.get('containers') ?? [];
+
+      String getGenerationLabel(int type) {
+        switch (type) {
+          case 0:
+            return "AI";
+          case 1:
+            return "Manual";
+          case 2:
+            return "User";
+          default:
+            return "Unknown";
+        }
+      }
+
       wordsBySection.forEach((section, words) {
         for (String word in words) {
-          // Generate a unique ID for each container
           String containerId = _firestore.collection('problems').doc().id;
           final newContainer = {
             'containerId': containerId,
             'containerName': "$section: $word",
             'messages': [],
-            'generatedBy': generatedByAI ? 'AI' : 'Manual',
+            'generatedBy': getGenerationLabel(generationType),
           };
 
           containers.add(newContainer);
         }
       });
 
-      // Update the containers in Firestore
       transaction.update(problemDocRef, {'containers': containers});
     });
   }

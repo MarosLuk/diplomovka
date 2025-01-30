@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:diplomovka/assets/reusableComponents/reusableComponents.dart';
+import 'package:diplomovka/pages/features/app/providers/profile_provider.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/chatting/problemSettingsPage.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,6 +14,7 @@ import 'package:diplomovka/pages/features/app/providers/invitation_provider.dart
 import 'dart:async';
 import 'package:diplomovka/pages/features/app/providers/problem_provider.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/chatting/problemSpec.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 
 class SelectionNotifier extends StateNotifier<Map<String, bool>> {
   SelectionNotifier() : super({});
@@ -77,15 +79,15 @@ class SelectionNotifier extends StateNotifier<Map<String, bool>> {
         throw Exception("Invalid format for unwrapped optionContent");
       }
 
-      // ✅ Generate words and check if AI was used
       final bool isGPTGenerated = await checkIfUsingGPT(problemId);
       final generatedWords =
           await generateSectionWords(sections, selectedGrouped, problemId);
 
-      // ✅ Pass the AI status when adding containers
+      int generationType = isGPTGenerated ? 0 : 1; // 0 = AI, 1 = Manual
+
       await ref
           .read(problemProvider.notifier)
-          .addContainersToProblem(problemId, generatedWords, isGPTGenerated);
+          .addContainersToProblem(problemId, generatedWords, generationType);
 
       Navigator.of(context).pop();
       clearSelections();
@@ -113,11 +115,64 @@ class ProblemPage extends ConsumerStatefulWidget {
 }
 
 class _ProblemPageState extends ConsumerState<ProblemPage> {
-  TextEditingController _containerNameController = TextEditingController();
-
   @override
   void initState() {
     super.initState();
+  }
+
+  void _showAddContainerDialog(BuildContext context, WidgetRef ref) async {
+    TextEditingController _containerController = TextEditingController();
+
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      showToast(message: "User not logged in!", isError: true);
+      return;
+    }
+
+    final userData = await ref.read(profileProvider.notifier).fetchUserData();
+    final String username =
+        userData['username'] ?? user.email ?? "Unknown User";
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: AppStyles.Primary50(),
+          title: Text("Add Custom Container"),
+          content: TextField(
+            controller: _containerController,
+            decoration: InputDecoration(hintText: "Enter container name"),
+          ),
+          actions: [
+            TextButton(
+              child: Text("Cancel"),
+              onPressed: () => Navigator.pop(context),
+            ),
+            TextButton(
+              child: Text("Add"),
+              onPressed: () async {
+                String containerName = _containerController.text.trim();
+                if (containerName.isNotEmpty) {
+                  await ref
+                      .read(problemProvider.notifier)
+                      .addContainersToProblem(
+                          widget.problemId,
+                          {
+                            username: [containerName]
+                          },
+                          2);
+
+                  Navigator.pop(context);
+                } else {
+                  showToast(
+                      message: "Container name cannot be empty!",
+                      isError: true);
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void specificationBottomSheet(BuildContext context, WidgetRef ref) async {
@@ -311,6 +366,10 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
               );
             },
           ),
+          IconButton(
+            icon: Icon(Icons.add, color: AppStyles.onBackground()),
+            onPressed: () => _showAddContainerDialog(context, ref),
+          ),
         ],
       ),
       body: Padding(
@@ -324,56 +383,82 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
                   itemBuilder: (context, index) {
                     final container = problem.containers[index];
 
-                    return LongPressDraggable<ContainerModel>(
-                      data: container,
-                      feedback: Material(
-                        color: Colors.transparent,
-                        child: Container(
-                          padding: const EdgeInsets.all(8.0),
-                          decoration: BoxDecoration(
-                            color: Colors.blueAccent.withOpacity(0.8),
-                            borderRadius: BorderRadius.circular(12),
+                    return Slidable(
+                      key: Key(container.containerId), // Unique identifier
+                      endActionPane: ActionPane(
+                        motion: const DrawerMotion(), // Smooth sliding effect
+                        children: [
+                          SlidableAction(
+                            onPressed: (context) async {
+                              await ref
+                                  .read(problemProvider.notifier)
+                                  .deleteContainer(
+                                      widget.problemId, container.containerId);
+                              showToast(
+                                  message: "Container deleted", isError: false);
+                            },
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            icon: Icons.delete,
+                            label: 'Delete',
+                            borderRadius:
+                                BorderRadius.circular(100), // Rounded corners
+                            padding: EdgeInsets.symmetric(
+                                vertical: 12, horizontal: 16),
                           ),
-                          child: Text(
-                            container.containerName,
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
+                        ],
                       ),
-                      childWhenDragging: Opacity(
-                        opacity: 0.5,
-                        child: buildContainerTile(context, container),
-                      ),
-                      child: DragTarget<ContainerModel>(
-                        builder: (BuildContext context,
-                            List<ContainerModel?> candidateData,
-                            List<dynamic> rejectedData) {
-                          final isDraggingOver = candidateData.isNotEmpty;
-                          return Container(
-                            margin: const EdgeInsets.symmetric(vertical: 6.0),
+                      child: LongPressDraggable<ContainerModel>(
+                        data: container,
+                        feedback: Material(
+                          color: Colors.transparent,
+                          child: Container(
+                            padding: const EdgeInsets.all(8.0),
                             decoration: BoxDecoration(
-                              border: Border.all(
-                                width: 2,
-                                color: isDraggingOver
-                                    ? Colors.green
-                                    : AppStyles.onBackground(),
-                              ),
+                              color: Colors.blueAccent.withOpacity(0.8),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: buildContainerTile(context, container),
-                          );
-                        },
-                        onWillAccept: (draggedContainer) {
-                          if (draggedContainer == null) return false;
-                          return draggedContainer.containerId !=
-                              container.containerId;
-                        },
-                        onAccept: (draggedContainer) async {
-                          await ref
-                              .read(problemProvider.notifier)
-                              .mergeContainers(widget.problemId, container,
-                                  draggedContainer);
-                        },
+                            child: Text(
+                              container.containerName,
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ),
+                        childWhenDragging: Opacity(
+                          opacity: 0.5,
+                          child: buildContainerTile(context, container),
+                        ),
+                        child: DragTarget<ContainerModel>(
+                          builder: (BuildContext context,
+                              List<ContainerModel?> candidateData,
+                              List<dynamic> rejectedData) {
+                            final isDraggingOver = candidateData.isNotEmpty;
+                            return Container(
+                              margin: const EdgeInsets.symmetric(vertical: 6.0),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  width: 2,
+                                  color: isDraggingOver
+                                      ? Colors.green
+                                      : AppStyles.onBackground(),
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: buildContainerTile(context, container),
+                            );
+                          },
+                          onWillAccept: (draggedContainer) {
+                            if (draggedContainer == null) return false;
+                            return draggedContainer.containerId !=
+                                container.containerId;
+                          },
+                          onAccept: (draggedContainer) async {
+                            await ref
+                                .read(problemProvider.notifier)
+                                .mergeContainers(widget.problemId, container,
+                                    draggedContainer);
+                          },
+                        ),
                       ),
                     );
                   },
