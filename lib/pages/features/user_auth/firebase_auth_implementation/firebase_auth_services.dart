@@ -6,7 +6,7 @@ import 'package:diplomovka/pages/features/app/global/toast.dart';
 class FirebaseAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  /// Simulated token durations.
+  // Simulated token durations.
   final Duration accessTokenDuration = const Duration(days: 5);
   final Duration refreshTokenDuration = const Duration(days: 5);
 
@@ -51,7 +51,7 @@ class FirebaseAuthService {
     }
   }
 
-  /// Simulate token generation and save them.
+  // Simulate token generation and save them.
   Future<void> _saveSimulatedTokens() async {
     // Generate dummy token strings.
     final String dummyAccessToken =

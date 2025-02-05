@@ -1,7 +1,6 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SecureStorageService {
-  // Create a singleton instance if desired
   static final SecureStorageService _instance =
       SecureStorageService._internal();
 
@@ -11,10 +10,9 @@ class SecureStorageService {
 
   SecureStorageService._internal();
 
-  // Use flutter_secure_storage
   final _secureStorage = const FlutterSecureStorage();
 
-  // Keys for your tokensƒ
+  // Keys for tokens
   static const String _keyAccessToken = 'access_token';
   static const String _keyRefreshToken = 'refresh_token';
 

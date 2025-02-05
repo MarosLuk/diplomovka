@@ -1,4 +1,3 @@
-// signUpPage.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:diplomovka/pages/features/user_auth/firebase_auth_implementation/firebase_auth_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';

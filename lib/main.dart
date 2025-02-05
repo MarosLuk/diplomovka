@@ -18,7 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  // Lock orientation if needed.
+
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   runApp(const ProviderScope(child: MyApp()));
@@ -32,10 +32,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  // Control theme settings.
   bool _isDarkMode = false;
 
-  // Track Firebase initialization.
   bool _isFirebaseInitialized = false;
 
   @override
@@ -46,16 +44,21 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _initializeFirebase() async {
     try {
-      // Get the remember me flag.
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp();
+        print(
+            "Firebase.initializeApp() completed inside _initializeFirebase().");
+      } else {
+        print("Firebase is already initialized.");
+      }
+
       SharedPreferences prefs = await SharedPreferences.getInstance();
       bool rememberMe = prefs.getBool('rememberMe') ?? false;
       print("Remember Me flag: $rememberMe");
 
-      // Read tokens from secure storage.
       final accessToken = await SecureStorageService().getAccessToken();
       final accessTokenExpiry =
           await SecureStorageService().getAccessTokenExpiry();
-
       print("Access Token from secure storage: $accessToken");
       print("Access Token Expiry from secure storage: $accessTokenExpiry");
 
@@ -63,7 +66,6 @@ class _MyAppState extends State<MyApp> {
           DateTime.now().isAfter(accessTokenExpiry);
       print("Token expired? $tokenExpired (Current time: ${DateTime.now()})");
 
-      // Only navigate to home if rememberMe is true, token is valid, and a Firebase user exists.
       if (rememberMe &&
           !tokenExpired &&
           FirebaseAuth.instance.currentUser != null) {
@@ -72,11 +74,10 @@ class _MyAppState extends State<MyApp> {
         });
       }
 
-      // Mark Firebase as initialized regardless.
       setState(() {
         _isFirebaseInitialized = true;
       });
-      print("Firebase initialized successfully");
+      print("Firebase initialized successfully (flag set).");
     } catch (e) {
       print("Error initializing Firebase: $e");
       showToastLong(message: "Error initializing Firebase: $e", isError: true);
@@ -126,10 +127,8 @@ class _MyAppState extends State<MyApp> {
                 theme: _lightTheme(),
                 darkTheme: _darkTheme(),
                 themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
-                // Use AuthCheck as the initial route.
                 initialRoute: '/',
                 routes: {
-                  // AuthCheck will read tokens from secure storage and route accordingly.
                   '/': (context) => const AuthCheck(),
                   '/home': (context) => const HomePage(),
                   '/login': (context) => const LoginPage(),

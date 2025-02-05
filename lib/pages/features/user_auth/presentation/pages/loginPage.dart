@@ -209,7 +209,6 @@ class _LoginPageState extends State<LoginPage> {
           await prefs.setBool('rememberMe', true);
         }
 
-        // Optionally, read back the token from secure storage for verification:
         String? storedToken = await SecureStorageService().getAccessToken();
         print("Stored Access Token: $storedToken");
 
@@ -237,7 +236,6 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  // (Optional) Sign in with Google method remains unchanged.
   Future<void> _signInWithGoogle() async {
     final GoogleSignIn _googleSignIn = GoogleSignIn();
 
