@@ -1,20 +1,24 @@
+// main.dart
+import 'package:diplomovka/pages/features/user_auth/secureStorage/authCheck.dart';
+import 'package:diplomovka/pages/features/user_auth/secureStorage/secureStorageService.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/homePage.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/signUpPage.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/loginPage.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/admin/adminSearchPage.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/admin/adminHomePage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
 import 'package:diplomovka/pages/features/app/global/toast.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  // Lock orientation if needed.
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   runApp(const ProviderScope(child: MyApp()));
@@ -28,41 +32,50 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  // Control theme settings.
   bool _isDarkMode = false;
+
+  // Track Firebase initialization.
   bool _isFirebaseInitialized = false;
-  bool _isLoggedIn = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeFirebase(context);
+    _initializeFirebase();
   }
 
-  Future<void> _initializeFirebase(BuildContext context) async {
+  Future<void> _initializeFirebase() async {
     try {
+      // Get the remember me flag.
       SharedPreferences prefs = await SharedPreferences.getInstance();
       bool rememberMe = prefs.getBool('rememberMe') ?? false;
+      print("Remember Me flag: $rememberMe");
 
-      User? currentUser = FirebaseAuth.instance.currentUser;
+      // Read tokens from secure storage.
+      final accessToken = await SecureStorageService().getAccessToken();
+      final accessTokenExpiry =
+          await SecureStorageService().getAccessTokenExpiry();
 
-      if (rememberMe && currentUser != null) {
+      print("Access Token from secure storage: $accessToken");
+      print("Access Token Expiry from secure storage: $accessTokenExpiry");
+
+      final tokenExpired = accessTokenExpiry == null ||
+          DateTime.now().isAfter(accessTokenExpiry);
+      print("Token expired? $tokenExpired (Current time: ${DateTime.now()})");
+
+      // Only navigate to home if rememberMe is true, token is valid, and a Firebase user exists.
+      if (rememberMe &&
+          !tokenExpired &&
+          FirebaseAuth.instance.currentUser != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (currentUser.email != null &&
-              currentUser.email!.endsWith("@admin.sk")) {
-            // Navigate to admin page
-            Navigator.pushReplacementNamed(context, "/admin");
-          } else {
-            // Navigate to home page
-            Navigator.pushReplacementNamed(context, "/home");
-          }
+          Navigator.pushReplacementNamed(context, "/home");
         });
       }
 
+      // Mark Firebase as initialized regardless.
       setState(() {
-        _isLoggedIn = rememberMe && currentUser != null;
         _isFirebaseInitialized = true;
       });
-
       print("Firebase initialized successfully");
     } catch (e) {
       print("Error initializing Firebase: $e");
@@ -72,6 +85,35 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    // While Firebase is initializing, show a splash/loading screen.
+    if (!_isFirebaseInitialized) {
+      return MaterialApp(
+        home: Scaffold(
+          body: Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: const BoxDecoration(color: Color(0xFF212121)),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Spacer(),
+
+                const SizedBox(height: 24),
+                Text(
+                  'Your Helpie',
+                  style: AppStyles.headLineLarge(color: Colors.white)
+                      .copyWith(fontSize: 32),
+                ),
+                const Spacer(), // Spacer pushes the loading indicator to the bottom
+
+                const SizedBox(height: 64),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return AnimatedTheme(
       data: _isDarkMode ? _darkTheme() : _lightTheme(),
       duration: const Duration(milliseconds: 300),
@@ -84,21 +126,16 @@ class _MyAppState extends State<MyApp> {
                 theme: _lightTheme(),
                 darkTheme: _darkTheme(),
                 themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
+                // Use AuthCheck as the initial route.
                 initialRoute: '/',
                 routes: {
-                  '/': (context) {
-                    // Perform Firebase initialization after the MaterialApp is built
-                    if (!_isFirebaseInitialized) {
-                      _initializeFirebase(context);
-                    }
-
-                    return const LoginPage();
-                  },
+                  // AuthCheck will read tokens from secure storage and route accordingly.
+                  '/': (context) => const AuthCheck(),
                   '/home': (context) => const HomePage(),
                   '/login': (context) => const LoginPage(),
                   '/signUp': (context) => const SignUpPage(),
-                  "/admin": (context) => const AdminHomePage(),
-                  "/admin/search": (context) => const AdminSearchPage(),
+                  '/admin': (context) => const AdminHomePage(),
+                  '/admin/search': (context) => const AdminSearchPage(),
                 },
               ),
             ),

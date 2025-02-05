@@ -1,8 +1,10 @@
+// loginPage.dart
+import 'package:diplomovka/pages/features/user_auth/firebase_auth_implementation/firebase_auth_services.dart';
+import 'package:diplomovka/pages/features/user_auth/secureStorage/secureStorageService.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:diplomovka/pages/features/user_auth/firebase_auth_implementation/firebase_auth_services.dart';
 import 'package:diplomovka/pages/features/app/global/toast.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
 
@@ -207,6 +209,10 @@ class _LoginPageState extends State<LoginPage> {
           await prefs.setBool('rememberMe', true);
         }
 
+        // Optionally, read back the token from secure storage for verification:
+        String? storedToken = await SecureStorageService().getAccessToken();
+        print("Stored Access Token: $storedToken");
+
         if (email.endsWith("@admin.sk")) {
           Navigator.pushNamedAndRemoveUntil(
             context,
@@ -231,6 +237,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  // (Optional) Sign in with Google method remains unchanged.
   Future<void> _signInWithGoogle() async {
     final GoogleSignIn _googleSignIn = GoogleSignIn();
 
@@ -255,7 +262,7 @@ class _LoginPageState extends State<LoginPage> {
         Navigator.pushReplacementNamed(context, "/home");
       }
     } catch (e) {
-      showToastLong(message: "Some error occurred: $e", isError: true);
+      showToast(message: "Some error occurred: $e", isError: true);
     }
   }
 }

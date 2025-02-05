@@ -1,11 +1,11 @@
+// signUpPage.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:diplomovka/pages/features/user_auth/firebase_auth_implementation/firebase_auth_services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:diplomovka/pages/features/user_auth/presentation/widgets/form_container_widget.dart';
-import 'package:diplomovka/pages/features/user_auth/presentation/pages/loginPage.dart';
 import 'package:diplomovka/pages/features/app/global/toast.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
+import 'package:diplomovka/pages/features/user_auth/secureStorage/secureStorageService.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -179,6 +179,10 @@ class _SignUpPageState extends State<SignUpPage> {
     });
 
     if (user != null) {
+      // Optionally, check that tokens have been stored:
+      String? storedToken = await SecureStorageService().getAccessToken();
+      print("Stored Access Token after signup: $storedToken");
+
       await _firestore.collection('users').doc(user.uid).set({
         'username': username,
         'email': email,
@@ -187,7 +191,7 @@ class _SignUpPageState extends State<SignUpPage> {
       showToast(message: "User is successfully created", isError: false);
       Navigator.pushReplacementNamed(context, "/login");
     } else {
-      print("Error occured during signUP.");
+      print("Error occurred during sign up.");
     }
   }
 }
