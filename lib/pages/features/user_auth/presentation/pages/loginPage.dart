@@ -1,4 +1,3 @@
-// loginPage.dart
 import 'package:diplomovka/pages/features/user_auth/firebase_auth_implementation/firebase_auth_services.dart';
 import 'package:diplomovka/pages/features/user_auth/secureStorage/secureStorageService.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -17,7 +16,7 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   bool _isSigning = false;
-  bool _rememberMe = false;
+  int _rememberMe = 0;
   final FirebaseAuthService _auth = FirebaseAuthService();
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
 
@@ -39,13 +38,12 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _checkRememberMe() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    bool rememberMe = prefs.getBool('rememberMe') ?? false;
+    int rememberStatus = prefs.getInt('rememberMe') ?? 0;
 
-    if (rememberMe) {
-      User? user = _firebaseAuth.currentUser;
-      if (user != null) {
-        Navigator.pushReplacementNamed(context, "/home");
-      }
+    if (rememberStatus == 1) {
+      Navigator.pushReplacementNamed(context, "/home");
+    } else if (rememberStatus == 2) {
+      Navigator.pushReplacementNamed(context, "/admin");
     }
   }
 
@@ -93,10 +91,10 @@ class _LoginPageState extends State<LoginPage> {
                     children: [
                       Checkbox(
                         checkColor: Colors.pinkAccent,
-                        value: _rememberMe,
+                        value: _rememberMe != 0,
                         onChanged: (bool? value) {
                           setState(() {
-                            _rememberMe = value!;
+                            _rememberMe = value! ? 1 : 0;
                           });
                         },
                       ),
@@ -119,9 +117,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 20),
               GestureDetector(
-                onTap: () {
-                  _signIn();
-                },
+                onTap: _signIn,
                 child: Container(
                   width: double.infinity,
                   height: 45,
@@ -204,15 +200,19 @@ class _LoginPageState extends State<LoginPage> {
       });
 
       if (user != null) {
-        if (_rememberMe) {
-          SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('rememberMe', true);
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        int rememberStatus = email.endsWith("@admin.sk") ? 2 : 1;
+
+        if (_rememberMe != 0) {
+          await prefs.setInt('rememberMe', rememberStatus);
+        } else {
+          await prefs.setInt('rememberMe', 0);
         }
 
         String? storedToken = await SecureStorageService().getAccessToken();
         print("Stored Access Token: $storedToken");
 
-        if (email.endsWith("@admin.sk")) {
+        if (rememberStatus == 2) {
           Navigator.pushNamedAndRemoveUntil(
             context,
             "/admin",
@@ -233,34 +233,6 @@ class _LoginPageState extends State<LoginPage> {
         _isSigning = false;
       });
       showToast(message: "Error signing in: $e", isError: true);
-    }
-  }
-
-  Future<void> _signInWithGoogle() async {
-    final GoogleSignIn _googleSignIn = GoogleSignIn();
-
-    try {
-      final GoogleSignInAccount? googleSignInAccount =
-          await _googleSignIn.signIn();
-
-      if (googleSignInAccount != null) {
-        final GoogleSignInAuthentication googleSignInAuthentication =
-            await googleSignInAccount.authentication;
-
-        final AuthCredential credential = GoogleAuthProvider.credential(
-          idToken: googleSignInAuthentication.idToken,
-          accessToken: googleSignInAuthentication.accessToken,
-        );
-
-        await _firebaseAuth.signInWithCredential(credential);
-        if (_rememberMe) {
-          SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setBool('rememberMe', true);
-        }
-        Navigator.pushReplacementNamed(context, "/home");
-      }
-    } catch (e) {
-      showToast(message: "Some error occurred: $e", isError: true);
     }
   }
 }

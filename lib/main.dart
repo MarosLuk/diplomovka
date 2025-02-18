@@ -1,4 +1,3 @@
-// main.dart
 import 'package:diplomovka/pages/features/user_auth/secureStorage/authCheck.dart';
 import 'package:diplomovka/pages/features/user_auth/secureStorage/secureStorageService.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -33,12 +32,12 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   bool _isDarkMode = false;
-
   bool _isFirebaseInitialized = false;
 
   @override
   void initState() {
     super.initState();
+
     _initializeFirebase();
   }
 
@@ -46,38 +45,39 @@ class _MyAppState extends State<MyApp> {
     try {
       if (Firebase.apps.isEmpty) {
         await Firebase.initializeApp();
-        print(
-            "Firebase.initializeApp() completed inside _initializeFirebase().");
+        print("Firebase initialized.");
       } else {
-        print("Firebase is already initialized.");
+        print("Firebase was already initialized.");
       }
 
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      bool rememberMe = prefs.getBool('rememberMe') ?? false;
-      print("Remember Me flag: $rememberMe");
+      final prefs = await SharedPreferences.getInstance();
+      final int rememberMeStatus = prefs.getInt('rememberMe') ??
+          0; // 0 = No user, 1 = Regular, 2 = Admin
 
       final accessToken = await SecureStorageService().getAccessToken();
       final accessTokenExpiry =
           await SecureStorageService().getAccessTokenExpiry();
-      print("Access Token from secure storage: $accessToken");
-      print("Access Token Expiry from secure storage: $accessTokenExpiry");
-
-      final tokenExpired = accessTokenExpiry == null ||
+      final bool tokenExpired = accessTokenExpiry == null ||
           DateTime.now().isAfter(accessTokenExpiry);
-      print("Token expired? $tokenExpired (Current time: ${DateTime.now()})");
 
-      if (rememberMe &&
+      print("Remember Me: $rememberMeStatus");
+      print("Token Expired: $tokenExpired");
+
+      if (rememberMeStatus != 0 &&
           !tokenExpired &&
           FirebaseAuth.instance.currentUser != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          Navigator.pushReplacementNamed(context, "/home");
+          if (rememberMeStatus == 2) {
+            Navigator.pushReplacementNamed(context, "/admin");
+          } else {
+            Navigator.pushReplacementNamed(context, "/home");
+          }
         });
       }
 
       setState(() {
         _isFirebaseInitialized = true;
       });
-      print("Firebase initialized successfully (flag set).");
     } catch (e) {
       print("Error initializing Firebase: $e");
       showToastLong(message: "Error initializing Firebase: $e", isError: true);
@@ -86,7 +86,6 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    // While Firebase is initializing, show a splash/loading screen.
     if (!_isFirebaseInitialized) {
       return MaterialApp(
         home: Scaffold(
@@ -98,15 +97,13 @@ class _MyAppState extends State<MyApp> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Spacer(),
-
                 const SizedBox(height: 24),
                 Text(
                   'Your Helpie',
                   style: AppStyles.headLineLarge(color: Colors.white)
                       .copyWith(fontSize: 32),
                 ),
-                const Spacer(), // Spacer pushes the loading indicator to the bottom
-
+                const Spacer(),
                 const SizedBox(height: 64),
               ],
             ),

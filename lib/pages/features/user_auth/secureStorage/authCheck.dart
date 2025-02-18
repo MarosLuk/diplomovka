@@ -1,7 +1,7 @@
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
 import 'package:diplomovka/pages/features/user_auth/secureStorage/secureStorageService.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 
 class AuthCheck extends StatefulWidget {
@@ -17,28 +17,33 @@ class _AuthCheckState extends State<AuthCheck> {
   @override
   void initState() {
     super.initState();
-    _checkTokens();
+    _checkAuthStatus();
   }
 
-  Future<void> _checkTokens() async {
+  Future<void> _checkAuthStatus() async {
     final accessToken = await _secureStorage.getAccessToken();
     final accessTokenExpiry = await _secureStorage.getAccessTokenExpiry();
+    final prefs = await SharedPreferences.getInstance();
+    final int rememberMeStatus = prefs.getInt('rememberMe') ?? 0;
 
     if (!mounted) return;
 
-    final bool isMissingToken = (accessToken == null || accessToken.isEmpty);
-    final bool isMissingExpiry = (accessTokenExpiry == null);
-    final bool isExpired = accessTokenExpiry != null
+    final bool isTokenMissing = (accessToken == null || accessToken.isEmpty);
+    final bool isTokenExpired = accessTokenExpiry != null
         ? DateTime.now().isAfter(accessTokenExpiry)
         : true;
 
     await Future.delayed(const Duration(seconds: 2));
 
-    if (isMissingToken || isMissingExpiry || isExpired) {
+    if (isTokenMissing || isTokenExpired || rememberMeStatus == 0) {
       await FirebaseAuth.instance.signOut();
       Navigator.pushReplacementNamed(context, '/login');
     } else {
-      Navigator.pushReplacementNamed(context, '/home');
+      if (rememberMeStatus == 2) {
+        Navigator.pushReplacementNamed(context, '/admin');
+      } else {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
     }
   }
 

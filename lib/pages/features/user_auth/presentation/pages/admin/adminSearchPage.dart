@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/admin/userDetailPage.dart';
+import 'dart:async';
 
 class AdminSearchPage extends StatefulWidget {
   const AdminSearchPage({super.key});
@@ -14,18 +15,38 @@ class _AdminSearchPageState extends State<AdminSearchPage> {
   final TextEditingController _searchController = TextEditingController();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  List<Map<String, dynamic>> _users = [];
   List<Map<String, dynamic>> _filteredUsers = [];
+  Timer? _debounce;
 
   @override
-  void initState() {
-    super.initState();
-    _fetchUsers();
+  void dispose() {
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
   }
 
-  Future<void> _fetchUsers() async {
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      if (query.length >= 2) {
+        _fetchUsers(query);
+      } else {
+        setState(() {
+          _filteredUsers = [];
+        });
+      }
+    });
+  }
+
+  Future<void> _fetchUsers(String query) async {
     try {
-      QuerySnapshot snapshot = await _firestore.collection('users').get();
+      QuerySnapshot snapshot = await _firestore
+          .collection('users')
+          .where('email', isGreaterThanOrEqualTo: query)
+          .where('email', isLessThanOrEqualTo: '$query\uf8ff')
+          .get();
+
       List<Map<String, dynamic>> users = snapshot.docs.map((doc) {
         return {
           'email': doc['email'],
@@ -35,21 +56,11 @@ class _AdminSearchPageState extends State<AdminSearchPage> {
       }).toList();
 
       setState(() {
-        _users = users;
         _filteredUsers = users;
       });
     } catch (e) {
       print("Error fetching users: $e");
     }
-  }
-
-  void _filterUsers(String query) {
-    setState(() {
-      _filteredUsers = _users.where((user) {
-        final email = user['email'].toLowerCase();
-        return email.contains(query.toLowerCase());
-      }).toList();
-    });
   }
 
   @override
@@ -70,7 +81,7 @@ class _AdminSearchPageState extends State<AdminSearchPage> {
           children: [
             TextField(
               controller: _searchController,
-              onChanged: _filterUsers,
+              onChanged: _onSearchChanged,
               decoration: InputDecoration(
                 labelText: 'Search by email',
                 prefixIcon: Icon(Icons.search, color: AppStyles.onBackground()),
@@ -114,13 +125,12 @@ class _AdminSearchPageState extends State<AdminSearchPage> {
                               ),
                             ),
                             onTap: () {
-                              // Navigate to UserDetailsPage
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => UserDetailsPage(
-                                    userId: user['uid'], // Pass the user ID
-                                    email: user['email'], // Pass the email
+                                    userId: user['uid'],
+                                    email: user['email'],
                                   ),
                                 ),
                               );

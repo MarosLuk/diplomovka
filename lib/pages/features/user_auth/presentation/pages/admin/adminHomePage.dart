@@ -36,7 +36,6 @@ class AdminHomePage extends StatelessWidget {
               leading: Icon(Icons.search),
               title: Text('Search Users'),
               onTap: () {
-                // Navigate to the User Search Page
                 Navigator.pushNamed(context, '/admin/search');
               },
             ),
@@ -44,11 +43,11 @@ class AdminHomePage extends StatelessWidget {
               leading: Icon(Icons.settings),
               title: Text('Settings'),
               onTap: () {
-                // Example: Add settings navigation here
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
                     title: Text('Settings'),
+                    backgroundColor: AppStyles.Primary50(),
                     content: Text('Settings functionality to be implemented.'),
                     actions: [
                       TextButton(
