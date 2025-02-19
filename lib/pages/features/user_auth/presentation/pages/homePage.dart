@@ -14,6 +14,7 @@ import 'package:diplomovka/pages/features/app/providers/problem_provider.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/chatting/problemPage.dart';
 import 'package:diplomovka/pages/features/app/providers/problem_provider.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/GPT_Page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -326,6 +327,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ref.read(usernameProvider.notifier).clearState();
 
                 await FirebaseAuth.instance.signOut();
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setInt('rememberMe', 0);
 
                 Navigator.pushNamedAndRemoveUntil(
                   context,

@@ -159,17 +159,9 @@ class _SignUpPageState extends State<SignUpPage> {
       isSigningUp = true;
     });
 
-    String username = _usernameController.text;
-    String email = _emailController.text;
-    String password = _passwordController.text;
-
-    if (email.endsWith("@admin.sk")) {
-      setState(() {
-        isSigningUp = false;
-      });
-      showToast(message: "You can't create new admin", isError: true);
-      return;
-    }
+    String username = _usernameController.text.trim();
+    String email = _emailController.text.trim();
+    String password = _passwordController.text.trim();
 
     User? user = await _auth.signUpWithEmailAndPassword(email, password);
 
@@ -178,17 +170,34 @@ class _SignUpPageState extends State<SignUpPage> {
     });
 
     if (user != null) {
-      // Optionally, check that tokens have been stored:
-      String? storedToken = await SecureStorageService().getAccessToken();
-      print("Stored Access Token after signup: $storedToken");
+      try {
+        bool isAdmin = email.endsWith("@admin.sk");
 
-      await _firestore.collection('users').doc(user.uid).set({
-        'username': username,
-        'email': email,
-      });
+        if (!isAdmin) {
+          // Send email verification ONLY for regular users
+          await user.sendEmailVerification();
+        }
 
-      showToast(message: "User is successfully created", isError: false);
-      Navigator.pushReplacementNamed(context, "/login");
+        await _firestore.collection('users').doc(user.uid).set({
+          'username': username,
+          'email': email,
+          'emailVerified': isAdmin ? true : false, // Admins are auto-verified
+        });
+
+        if (isAdmin) {
+          showToast(
+              message: "Admin account created successfully.", isError: false);
+        } else {
+          showToast(
+              message:
+                  "Verification email sent. Please verify before logging in.",
+              isError: false);
+        }
+
+        Navigator.pushReplacementNamed(context, "/login");
+      } catch (e) {
+        showToast(message: "Error during sign-up: $e", isError: true);
+      }
     } else {
       print("Error occurred during sign up.");
     }

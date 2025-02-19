@@ -2,6 +2,7 @@ import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
 import 'package:diplomovka/pages/features/app/global/toast.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AdminHomePage extends StatelessWidget {
   const AdminHomePage({Key? key}) : super(key: key);
@@ -40,6 +41,13 @@ class AdminHomePage extends StatelessWidget {
               },
             ),
             ListTile(
+              leading: Icon(Icons.query_stats),
+              title: Text('Statistics'),
+              onTap: () {
+                Navigator.pushNamed(context, '/statistics');
+              },
+            ),
+            ListTile(
               leading: Icon(Icons.settings),
               title: Text('Settings'),
               onTap: () {
@@ -64,6 +72,8 @@ class AdminHomePage extends StatelessWidget {
               title: Text('Logout'),
               onTap: () async {
                 await FirebaseAuth.instance.signOut();
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setInt('rememberMe', 0);
                 Navigator.pushNamedAndRemoveUntil(
                   context,
                   '/login',

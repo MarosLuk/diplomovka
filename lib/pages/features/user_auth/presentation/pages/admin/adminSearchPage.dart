@@ -17,6 +17,7 @@ class _AdminSearchPageState extends State<AdminSearchPage> {
 
   List<Map<String, dynamic>> _filteredUsers = [];
   Timer? _debounce;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -34,12 +35,17 @@ class _AdminSearchPageState extends State<AdminSearchPage> {
       } else {
         setState(() {
           _filteredUsers = [];
+          _isLoading = false;
         });
       }
     });
   }
 
   Future<void> _fetchUsers(String query) async {
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
       QuerySnapshot snapshot = await _firestore
           .collection('users')
@@ -60,6 +66,10 @@ class _AdminSearchPageState extends State<AdminSearchPage> {
       });
     } catch (e) {
       print("Error fetching users: $e");
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -68,7 +78,7 @@ class _AdminSearchPageState extends State<AdminSearchPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'User search',
+          'User Search',
           style: AppStyles.headLineMedium(
             color: Theme.of(context).primaryColor,
           ),
@@ -94,52 +104,58 @@ class _AdminSearchPageState extends State<AdminSearchPage> {
               ),
             ),
             const SizedBox(height: 20),
-            Expanded(
-              child: _filteredUsers.isEmpty
-                  ? Center(
-                      child: Text(
-                        'No users found',
-                        style: AppStyles.titleMedium(
-                          color: AppStyles.backgroundLight(),
-                        ),
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: _filteredUsers.length,
-                      itemBuilder: (context, index) {
-                        final user = _filteredUsers[index];
-                        return Card(
-                          color: AppStyles.backgroundLight(),
-                          margin: const EdgeInsets.symmetric(vertical: 8.0),
-                          child: ListTile(
-                            title: Text(
-                              user['email'],
-                              style: AppStyles.labelSmall(
-                                color: Theme.of(context).primaryColor,
-                              ),
-                            ),
-                            subtitle: Text(
-                              user['username'],
-                              style: AppStyles.titleSmall(
-                                color: Theme.of(context).primaryColor,
-                              ),
-                            ),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => UserDetailsPage(
-                                    userId: user['uid'],
-                                    email: user['email'],
-                                  ),
-                                ),
-                              );
-                            },
+            if (_isLoading)
+              const Center(
+                child: CircularProgressIndicator(),
+              )
+            else
+              Expanded(
+                child: _filteredUsers.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No users found',
+                          style: AppStyles.titleMedium(
+                            color: AppStyles.backgroundLight(),
                           ),
-                        );
-                      },
-                    ),
-            ),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: _filteredUsers.length,
+                        itemBuilder: (context, index) {
+                          final user = _filteredUsers[index];
+                          return Card(
+                            color: AppStyles.backgroundLight(),
+                            margin: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: ListTile(
+                              title: Text(
+                                user['email'],
+                                style: AppStyles.labelSmall(
+                                  color: Theme.of(context).primaryColor,
+                                ),
+                              ),
+                              subtitle: Text(
+                                user['username'],
+                                style: AppStyles.titleSmall(
+                                  color: Theme.of(context).primaryColor,
+                                ),
+                              ),
+                              onTap: () {
+                                // Navigate to UserDetailsPage
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => UserDetailsPage(
+                                      userId: user['uid'],
+                                      email: user['email'],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        },
+                      ),
+              ),
           ],
         ),
       ),

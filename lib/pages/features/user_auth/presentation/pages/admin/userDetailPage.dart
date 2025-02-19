@@ -1,5 +1,7 @@
+import 'package:diplomovka/pages/features/user_auth/presentation/pages/admin/adminProblemDetail.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
 
 class UserDetailsPage extends StatefulWidget {
@@ -15,11 +17,18 @@ class UserDetailsPage extends StatefulWidget {
 
 class _UserDetailsPageState extends State<UserDetailsPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  TextEditingController _emailController = TextEditingController();
+  TextEditingController _usernameController = TextEditingController();
+  TextEditingController _passwordController = TextEditingController();
+
+  bool isLoading = true;
+  bool isUpdating = false;
 
   List<Map<String, dynamic>> ownedProblems = [];
   List<Map<String, dynamic>> collaboratedProblems = [];
   List<Map<String, dynamic>> invites = [];
-  bool isLoading = true;
 
   @override
   void initState() {
@@ -29,6 +38,15 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
 
   Future<void> _fetchUserDetails() async {
     try {
+      // Fetch user data
+      DocumentSnapshot userDoc =
+          await _firestore.collection('users').doc(widget.userId).get();
+
+      if (userDoc.exists) {
+        _emailController.text = userDoc['email'];
+        _usernameController.text = userDoc['username'];
+      }
+
       // Fetch owned problems
       QuerySnapshot ownedSnapshot = await _firestore
           .collection('problems')
@@ -56,16 +74,17 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
         };
       }).toList();
 
-      // Fetch invites
+      // 🔹 Fetch invites (FIXED FIELD NAME)
       QuerySnapshot invitesSnapshot = await _firestore
           .collection('invites')
-          .where('email', isEqualTo: widget.email)
+          .where('invitedEmail', isEqualTo: widget.email) // ✅ Fixed
           .get();
 
       List<Map<String, dynamic>> invitesList = invitesSnapshot.docs.map((doc) {
         return {
           'problemId': doc['problemId'],
           'problemName': doc['problemName'],
+          'invitedBy': doc['invitedBy'],
         };
       }).toList();
 
@@ -81,6 +100,139 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
         isLoading = false;
       });
     }
+  }
+
+  Future<void> _updateUserDetails() async {
+    setState(() {
+      isUpdating = true;
+    });
+
+    try {
+      // Update email and username in Firestore
+      await _firestore.collection('users').doc(widget.userId).update({
+        'email': _emailController.text,
+        'username': _usernameController.text,
+      });
+
+      // If a new password is entered, update it in Firebase Authentication
+      if (_passwordController.text.isNotEmpty) {
+        User? user = _auth.currentUser;
+
+        if (user != null) {
+          // Re-authenticate the user before changing password
+          bool reauthenticated = await _reauthenticateUser(user);
+          if (reauthenticated) {
+            await user.updatePassword(_passwordController.text);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('User password updated successfully!')),
+            );
+          } else {
+            throw FirebaseAuthException(
+              code: 'requires-recent-login',
+              message: 'User re-authentication failed!',
+            );
+          }
+        }
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('User details updated successfully!')),
+      );
+    } catch (e) {
+      print("Error updating user details: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update user details: $e')),
+      );
+    } finally {
+      setState(() {
+        isUpdating = false;
+      });
+    }
+  }
+
+  /// 🔹 **Helper Function: Re-authenticate User**
+  Future<bool> _reauthenticateUser(User user) async {
+    try {
+      String? currentPassword = await _showReauthDialog();
+
+      if (currentPassword != null) {
+        AuthCredential credential = EmailAuthProvider.credential(
+          email: user.email!,
+          password: currentPassword,
+        );
+
+        await user.reauthenticateWithCredential(credential);
+        return true; // ✅ Re-authentication successful
+      } else {
+        return false; // ❌ User canceled re-authentication
+      }
+    } catch (e) {
+      print("Re-authentication error: $e");
+      return false;
+    }
+  }
+
+  /// 🔹 **Helper Function: Show Re-authentication Dialog**
+  Future<String?> _showReauthDialog() async {
+    TextEditingController passwordController = TextEditingController();
+
+    return await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: AppStyles.Primary50(),
+          title: Text("Re-authenticate User"),
+          content: TextField(
+            controller: passwordController,
+            obscureText: true,
+            decoration: InputDecoration(
+              labelText: "Enter Current Password",
+              filled: true,
+              fillColor: AppStyles.backgroundLight(),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, null), // Cancel
+              child: Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(
+                    context, passwordController.text); // Return password
+              },
+              child: Text("Confirm"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> checkEmailInFirestore(String email) async {
+    final usersRef = FirebaseFirestore.instance.collection('users');
+    final query = await usersRef.where('email', isEqualTo: email).get();
+
+    if (query.docs.isNotEmpty) {
+      print("✅ Email exists in Firestore.");
+    } else {
+      print("❌ Email not found in Firestore.");
+    }
+  }
+
+  Future<void> _verifyAndSendPasswordReset() async {
+    final email = _emailController.text.trim().toLowerCase();
+
+    // ✅ If we reach here, the user exists
+    await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+    print("✅ Password reset email sent to $email");
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Password reset email sent to $email")),
+    );
   }
 
   @override
@@ -103,22 +255,134 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSection(
-                      'Owned Problems',
-                      ownedProblems,
+                    _buildEditableField('Email', _emailController),
+                    _buildEditableField('Username', _usernameController),
+                    //_buildEditableField('New Password', _passwordController,
+                    //isPassword: true),
+                    _buildPasswordField(),
+                    const SizedBox(height: 10),
+                    ElevatedButton(
+                      onPressed: isUpdating ? null : _updateUserDetails,
+                      child: isUpdating
+                          ? CircularProgressIndicator(color: Colors.white)
+                          : Text('Save Changes'),
                     ),
+                    const SizedBox(height: 20),
+                    _buildSection('Owned Problems', ownedProblems),
                     _buildSection(
-                      'Collaborated Problems',
-                      collaboratedProblems,
+                        'Collaborated Problems', collaboratedProblems),
+                    _buildSection('Invites', invites),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildPasswordField() {
+    bool obscureText = true;
+
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'New Password',
+              style: AppStyles.titleMedium(
+                color: Theme.of(context).primaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _passwordController,
+              obscureText: obscureText,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: AppStyles.backgroundLight(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+                suffixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        obscureText ? Icons.visibility_off : Icons.visibility,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          obscureText =
+                              !obscureText; // Toggle password visibility
+                        });
+                      },
                     ),
-                    _buildSection(
-                      'Invites',
-                      invites,
+                    IconButton(
+                      icon: Icon(
+                        Icons.lock_reset,
+                        color: Colors.red, // Reset icon
+                      ),
+                      onPressed:
+                          _verifyAndSendPasswordReset, // Trigger reset email
                     ),
                   ],
                 ),
               ),
             ),
+            const SizedBox(height: 16),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildEditableField(String label, TextEditingController controller,
+      {bool isPassword = false}) {
+    bool obscureText = isPassword; // Default to true for passwords
+
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: AppStyles.titleMedium(
+                color: Theme.of(context).primaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: controller,
+              obscureText: obscureText,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: AppStyles.backgroundLight(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+                suffixIcon: isPassword
+                    ? IconButton(
+                        icon: Icon(
+                          obscureText ? Icons.visibility_off : Icons.visibility,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            obscureText = !obscureText; // Toggle visibility
+                          });
+                        },
+                      )
+                    : null,
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        );
+      },
     );
   }
 
@@ -151,14 +415,14 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                     margin: const EdgeInsets.symmetric(vertical: 8.0),
                     child: ListTile(
                       title: Text(
-                        item['problemName'],
-                        style: AppStyles.labelSmall(
+                        'Name: ' + item['problemName'],
+                        style: AppStyles.titleSmall(
                           color: Theme.of(context).primaryColor,
                         ),
                       ),
                       subtitle: Text(
                         'Problem ID: ${item['problemId']}',
-                        style: AppStyles.titleSmall(
+                        style: AppStyles.labelSmall(
                           color: Theme.of(context).primaryColor,
                         ),
                       ),
@@ -180,38 +444,6 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
               ),
         const SizedBox(height: 16),
       ],
-    );
-  }
-}
-
-class ProblemDetailsPage extends StatelessWidget {
-  final String problemId;
-  final String problemName;
-
-  const ProblemDetailsPage({
-    Key? key,
-    required this.problemId,
-    required this.problemName,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          problemName,
-          style: TextStyle(color: Theme.of(context).primaryColor),
-        ),
-        backgroundColor: AppStyles.backgroundLight(),
-      ),
-      body: Center(
-        child: Text(
-          'Details of $problemName (ID: $problemId)',
-          style: AppStyles.titleMedium(
-            color: Theme.of(context).primaryColor,
-          ),
-        ),
-      ),
     );
   }
 }

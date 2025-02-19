@@ -190,8 +190,8 @@ class _LoginPageState extends State<LoginPage> {
       _isSigning = true;
     });
 
-    String email = _emailController.text;
-    String password = _passwordController.text;
+    String email = _emailController.text.trim();
+    String password = _passwordController.text.trim();
 
     try {
       User? user = await _auth.signInWithEmailAndPassword(email, password);
@@ -200,8 +200,20 @@ class _LoginPageState extends State<LoginPage> {
       });
 
       if (user != null) {
+        await user.reload();
+        user = FirebaseAuth.instance.currentUser;
+
+        bool isAdmin = email.endsWith("@admin.sk");
+
+        if (!isAdmin && user!.emailVerified == false) {
+          showToast(
+              message: "Please verify your email before logging in.",
+              isError: true);
+          return;
+        }
+
         SharedPreferences prefs = await SharedPreferences.getInstance();
-        int rememberStatus = email.endsWith("@admin.sk") ? 2 : 1;
+        int rememberStatus = isAdmin ? 2 : 1;
 
         if (_rememberMe != 0) {
           await prefs.setInt('rememberMe', rememberStatus);
