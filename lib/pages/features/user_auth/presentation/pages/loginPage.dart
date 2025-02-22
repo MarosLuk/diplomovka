@@ -190,8 +190,8 @@ class _LoginPageState extends State<LoginPage> {
       _isSigning = true;
     });
 
-    String email = _emailController.text.trim();
-    String password = _passwordController.text.trim();
+    String email = _emailController.text;
+    String password = _passwordController.text;
 
     try {
       User? user = await _auth.signInWithEmailAndPassword(email, password);
@@ -200,12 +200,7 @@ class _LoginPageState extends State<LoginPage> {
       });
 
       if (user != null) {
-        await user.reload();
-        user = FirebaseAuth.instance.currentUser;
-
-        bool isAdmin = email.endsWith("@admin.sk");
-
-        if (!isAdmin && user!.emailVerified == false) {
+        if (!email.endsWith("@admin.sk") && !user.emailVerified) {
           showToast(
               message: "Please verify your email before logging in.",
               isError: true);
@@ -213,13 +208,16 @@ class _LoginPageState extends State<LoginPage> {
         }
 
         SharedPreferences prefs = await SharedPreferences.getInstance();
-        int rememberStatus = isAdmin ? 2 : 1;
+        int rememberStatus = email.endsWith("@admin.sk") ? 2 : 1;
 
         if (_rememberMe != 0) {
           await prefs.setInt('rememberMe', rememberStatus);
         } else {
           await prefs.setInt('rememberMe', 0);
         }
+
+        await SecureStorageService()
+            .saveAccessToken("dummy_token_here", days: 5);
 
         String? storedToken = await SecureStorageService().getAccessToken();
         print("Stored Access Token: $storedToken");

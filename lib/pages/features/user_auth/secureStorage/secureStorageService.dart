@@ -19,6 +19,14 @@ class SecureStorageService {
   static const String _accessTokenExpiryKey = 'access_token_expiry';
   static const String _refreshTokenExpiryKey = 'refresh_token_expiry';
 
+  Future<void> saveAccessToken(String token, {int days = 5}) async {
+    final expiryDate =
+        DateTime.now().add(Duration(days: days)).toIso8601String();
+
+    await _secureStorage.write(key: 'accessToken', value: token);
+    await _secureStorage.write(key: 'accessTokenExpiry', value: expiryDate);
+  }
+
   Future<void> saveTokens(
     String accessToken,
     String refreshToken, {
