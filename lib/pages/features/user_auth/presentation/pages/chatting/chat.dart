@@ -286,7 +286,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                               children: [
                                 Text(
                                   senderEmail,
-                                  // Display the email instead of username
                                   style: AppStyles.labelSmall(
                                     color: Theme.of(context).primaryColor,
                                   ),

@@ -25,7 +25,7 @@ class AdminHomePage extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppStyles.background(),
               ),
-              child: Text(
+              child: const Text(
                 'Admin',
                 style: TextStyle(
                   color: Colors.white,
@@ -34,33 +34,34 @@ class AdminHomePage extends StatelessWidget {
               ),
             ),
             ListTile(
-              leading: Icon(Icons.search),
-              title: Text('Search Users'),
+              leading: const Icon(Icons.search),
+              title: const Text('Search Users'),
               onTap: () {
                 Navigator.pushNamed(context, '/admin/search');
               },
             ),
             ListTile(
-              leading: Icon(Icons.query_stats),
-              title: Text('Statistics'),
+              leading: const Icon(Icons.query_stats),
+              title: const Text('Statistics'),
               onTap: () {
                 Navigator.pushNamed(context, '/statistics');
               },
             ),
             ListTile(
-              leading: Icon(Icons.settings),
-              title: Text('Settings'),
+              leading: const Icon(Icons.settings),
+              title: const Text('Settings'),
               onTap: () {
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: Text('Settings'),
+                    title: const Text('Settings'),
                     backgroundColor: AppStyles.Primary50(),
-                    content: Text('Settings functionality to be implemented.'),
+                    content:
+                        const Text('Settings functionality to be implemented.'),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: Text('Close'),
+                        child: const Text('Close'),
                       ),
                     ],
                   ),
@@ -68,8 +69,8 @@ class AdminHomePage extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: Icon(Icons.logout),
-              title: Text('Logout'),
+              leading: const Icon(Icons.logout),
+              title: const Text('Logout'),
               onTap: () async {
                 await FirebaseAuth.instance.signOut();
                 final prefs = await SharedPreferences.getInstance();
@@ -86,7 +87,7 @@ class AdminHomePage extends StatelessWidget {
           ],
         ),
       ),
-      body: Center(
+      body: const Center(
         child: Text(
           "Welcome to the Admin Dashboard",
           style: TextStyle(fontSize: 18),

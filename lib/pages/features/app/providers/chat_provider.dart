@@ -46,19 +46,16 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
     final userEmail = FirebaseAuth.instance.currentUser!.email!;
     final userId = FirebaseAuth.instance.currentUser!.uid;
 
-    // Add the user as a participant in the chat
     await _firestore.collection('chats').doc(chatId).update({
       'participants': FieldValue.arrayUnion([userEmail]),
     });
 
-    // Fetch both user's own chats and chats where the user is a participant
     fetchChats(userId, userEmail);
   }
 
   Future<bool> sendInvite(BuildContext context, String chatId, String email,
       String chatName) async {
     try {
-      // Check if the user with the provided email exists
       final QuerySnapshot userSnapshot = await FirebaseFirestore.instance
           .collection('users')
           .where('email', isEqualTo: email)
@@ -67,10 +64,9 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
       if (userSnapshot.docs.isEmpty) {
         print("No user found with email $email");
         await _showDialog(context, "Error", "No user found with this email.");
-        return false; // Email not found
+        return false;
       }
 
-      // Check if an invite for the user and chat already exists
       final QuerySnapshot existingInvite = await FirebaseFirestore.instance
           .collection('invites')
           .where('chatId', isEqualTo: chatId)
@@ -78,38 +74,36 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
           .get();
 
       if (existingInvite.docs.isNotEmpty) {
-        // Invite already exists, show error dialog
         print("Invite already sent to $email for this chat.");
         await _showDialog(context, "Error",
             "Invite already sent to this user for this chat.");
         return false;
       }
 
-      // Send the invite with the current chat name if the email exists
       await FirebaseFirestore.instance.collection('invites').add({
         'chatId': chatId,
         'invitedEmail': email,
         'invitedBy': FirebaseAuth.instance.currentUser!.email,
         'timestamp': FieldValue.serverTimestamp(),
-        'chatName': chatName, // Include the chat name in the invite
+        'chatName': chatName,
       });
 
       print("Invite sent to $email");
       await _showDialog(
           context, "Invite Sent", "The invite was successfully sent to $email");
-      return true; // Invite sent successfully
+      return true;
     } catch (e) {
       print("Error sending invite: $e");
       await _showDialog(
           context, "Error", "Failed to send invite. Please try again.");
-      return false; // Some error occurred
+      return false;
     }
   }
 
   Future<void> _showDialog(
       BuildContext context, String title, String message) async {
     return showDialog<void>(
-      context: context, // Replace with your navigator context if necessary
+      context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
@@ -171,11 +165,9 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
             TextButton(
               onPressed: () async {
                 try {
-                  // Try sending the invite
                   await sendInvite(
                       context, chatId, _inviteEmailController.text, chatName);
 
-                  // Show success dialog after the invite has been sent
                   await showDialog(
                     context: context,
                     builder: (context) {
@@ -186,7 +178,7 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
                         actions: [
                           TextButton(
                             onPressed: () {
-                              Navigator.of(context).pop(); // Close the dialog
+                              Navigator.of(context).pop();
                             },
                             child: Text('OK',
                                 style: TextStyle(
@@ -198,7 +190,6 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
                     },
                   );
                 } catch (e) {
-                  // Show error dialog if something goes wrong
                   await showDialog(
                     context: context,
                     builder: (context) {
@@ -209,7 +200,7 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
                         actions: [
                           TextButton(
                             onPressed: () {
-                              Navigator.of(context).pop(); // Close the dialog
+                              Navigator.of(context).pop();
                             },
                             child: Text('OK',
                                 style: TextStyle(
@@ -221,7 +212,6 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
                     },
                   );
                 } finally {
-                  // Close the invite email dialog after action
                   Navigator.of(context).pop();
                 }
               },
@@ -257,7 +247,6 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
       final chats = await Future.wait(combinedDocs.map((doc) async {
         final data = doc.data();
 
-        // Fetch usernames for all messages
         final messages = await Future.wait(
             List<Map<String, dynamic>>.from(data['messages'] ?? [])
                 .map((msg) async {
@@ -266,7 +255,7 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
             'message': msg['message'],
             'senderId': msg['senderId'],
             'senderEmail': msg['senderEmail'],
-            'username': username, // Add username to message data
+            'username': username,
           };
         }).toList());
 
@@ -293,7 +282,7 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
     final userDoc = await _firestore.collection('users').doc(userId).get();
     if (userDoc.exists) {
       final username = userDoc.data()?['username'] ?? 'Unknown';
-      _usernameCache[userId] = username; // Cache the username
+      _usernameCache[userId] = username;
       return username;
     } else {
       return 'Unknown';
@@ -324,7 +313,6 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
           throw Exception("Container does not exist");
         }
 
-        // Add the new message to the container's messages array
         List<dynamic> messages = containers[containerIndex]['messages'] ?? [];
         messages.add(newMessage);
 
@@ -333,7 +321,6 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
         transaction.update(problemDocRef, {'containers': containers});
       });
 
-      // After adding the message to Firestore, add it to the local state for immediate UI update
       final chatModel = state.firstWhere((chat) => chat.chatId == chatId);
       chatModel.messages.add({
         'message': message,

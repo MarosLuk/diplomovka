@@ -109,7 +109,7 @@ class _ProblemDetailsPageState extends State<ProblemDetailsPage> {
         backgroundColor: AppStyles.backgroundLight(),
       ),
       body: isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : Padding(
               padding: const EdgeInsets.all(16.0),
               child: SingleChildScrollView(
@@ -193,7 +193,7 @@ class _ProblemDetailsPageState extends State<ProblemDetailsPage> {
                             )
                           : null,
                       trailing: IconButton(
-                        icon: Icon(Icons.delete, color: Colors.red),
+                        icon: const Icon(Icons.delete, color: Colors.red),
                         onPressed: () {
                           if (isContainer) {
                             _deleteContainer(item['containerId']);

@@ -12,10 +12,6 @@ Future<Map<String, List<String>>> generateSectionWords(
   Map<String, List<String>> selectedOptions,
   String problemId,
 ) async {
-  final Random random = Random();
-  final Map<String, List<String>> result = {};
-
-  // 🔹 Fetch problem settings from Firestore
   final firestore = FirebaseFirestore.instance;
   final problemSnapshot =
       await firestore.collection('problems').doc(problemId).get();
@@ -23,18 +19,33 @@ Future<Map<String, List<String>>> generateSectionWords(
   if (!problemSnapshot.exists) {
     throw Exception("Problem settings not found.");
   }
+
   final problemData = problemSnapshot.data() as Map<String, dynamic>;
   final int totalWordsNeeded = (problemData['sliderValue'] ?? 5).toInt();
   final bool isSolutionDomain = problemData['isSolutionDomain'] ?? false;
   final bool isVerifiedTerms = problemData['isVerifiedTerms'] ?? false;
+  final bool isUseContext = problemData['isUseContext'] ?? false;
+  final bool isSpilledHat = problemData['isSpilledHat'] ?? false;
+  final String? problemDescription = problemData['problemDescription'];
 
-  print("Firestore Settings: sliderValue=$totalWordsNeeded, "
-      "isSolutionDomain=$isSolutionDomain, isVerifiedTerms=$isVerifiedTerms");
+  print(
+      "Firestore Settings: sliderValue=$totalWordsNeeded, isSolutionDomain=$isSolutionDomain, "
+      "isVerifiedTerms=$isVerifiedTerms, isSpilledHat=$isSpilledHat, isUseContext=$isUseContext, problemDescription=$problemDescription");
 
-  Map<String, dynamic> allOptionContent = {};
+  Map<String, List<String>> result = {};
 
-  // 🔹 Fetch optionContent from Firestore **only if NOT using GPT**
-  if (!isVerifiedTerms) {
+  if (isVerifiedTerms) {
+    result = await fetchWordsFromGPT(
+      selectedOptions,
+      totalWordsNeeded,
+      isSolutionDomain,
+      isUseContext,
+      isSpilledHat,
+      problemDescription,
+    );
+  } else {
+    Map<String, dynamic> allOptionContent = {};
+
     final optionContentDoc = await firestore
         .collection('problemSpecifications')
         .doc('optionContent')
@@ -50,27 +61,14 @@ Future<Map<String, List<String>>> generateSectionWords(
     }
 
     allOptionContent = data['optionContent'] as Map<String, dynamic>;
-  }
 
-  // 🔹 Call GPT once to get exactly `totalWordsNeeded` words
-  Map<String, List<String>> gptGeneratedWords = {};
+    final Random random = Random();
 
-  if (isVerifiedTerms) {
-    gptGeneratedWords = await fetchWordsFromGPT(
-        selectedOptions, totalWordsNeeded, isSolutionDomain);
-  }
+    for (final section in sectionsData) {
+      final sectionTitle = section["title"];
+      final List<String> options = selectedOptions[sectionTitle] ?? [];
+      final List<String> sectionWords = [];
 
-  // 🔹 Generate words for each section
-  for (final section in sectionsData) {
-    final sectionTitle = section["title"];
-    final List<String> options = selectedOptions[sectionTitle] ?? [];
-    final List<String> sectionWords = []; // ✅ Declare it properly here
-
-    if (isVerifiedTerms) {
-      // 🔹 **Assign GPT words to each section**
-      sectionWords.addAll(gptGeneratedWords[sectionTitle] ?? []);
-    } else {
-      // 🔹 Otherwise, fetch words from Firestore
       final List<Map<String, dynamic>> mostRelatable = [];
       final List<Map<String, dynamic>> middleRelatable = [];
       final List<Map<String, dynamic>> uncommon = [];
@@ -99,7 +97,6 @@ Future<Map<String, List<String>>> generateSectionWords(
             continue;
           }
 
-          // 🔹 Filter by solution/application
           final bool matchesDomain =
               (isSolutionDomain && domainType == 'solution') ||
                   (!isSolutionDomain && domainType == 'application');
@@ -161,10 +158,10 @@ Future<Map<String, List<String>>> generateSectionWords(
       while (sectionWords.length < totalWordsNeeded) {
         sectionWords.add("");
       }
-    }
 
-    result[sectionTitle] =
-        sectionWords.where((word) => word.isNotEmpty).toList();
+      result[sectionTitle] =
+          sectionWords.where((word) => word.isNotEmpty).toList();
+    }
   }
 
   return result;
@@ -174,6 +171,9 @@ Future<Map<String, List<String>>> fetchWordsFromGPT(
   Map<String, List<String>> selectedOptions,
   int sliderValue,
   bool isSolutionDomain,
+  bool isUseContext,
+  bool isSpilledHat,
+  String? problemDescription,
 ) async {
   final OpenAIService openAIService = OpenAIService(APIkey_GPT);
 
@@ -181,6 +181,8 @@ Future<Map<String, List<String>>> fetchWordsFromGPT(
     selectedOptionsGroupedBySections: selectedOptions,
     numberOfWords: sliderValue,
     isSolutionDomain: isSolutionDomain,
+    isSpilledHat: isSpilledHat,
+    problemDescription: isUseContext ? problemDescription : null,
   );
 
   print("🔹 GPT Response: $gptResponse");
@@ -188,13 +190,11 @@ Future<Map<String, List<String>>> fetchWordsFromGPT(
   final List<String> words =
       gptResponse.split("\n").where((word) => word.isNotEmpty).toList();
 
-  // ✅ Distribute words across selected sections
   final Map<String, List<String>> sectionWords = {};
   final sectionKeys = selectedOptions.keys.toList();
 
   for (int i = 0; i < words.length; i++) {
-    final section = sectionKeys[
-        i % sectionKeys.length]; // Assign words cyclically to sections
+    final section = sectionKeys[i % sectionKeys.length];
     sectionWords.putIfAbsent(section, () => []).add(words[i]);
   }
 

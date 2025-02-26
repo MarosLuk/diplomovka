@@ -12,7 +12,6 @@ class SecureStorageService {
 
   final _secureStorage = const FlutterSecureStorage();
 
-  // Keys for tokens
   static const String _keyAccessToken = 'access_token';
   static const String _keyRefreshToken = 'refresh_token';
 

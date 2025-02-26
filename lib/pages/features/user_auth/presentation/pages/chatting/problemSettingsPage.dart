@@ -28,6 +28,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
   final ValueNotifier<bool> _isVerifiedTerms = ValueNotifier(false);
   final ValueNotifier<bool> _isSpilledHat = ValueNotifier(false);
   final ValueNotifier<bool> _isSolutionDomain = ValueNotifier(false);
+  final ValueNotifier<bool> _isUseContext = ValueNotifier(false);
   final ValueNotifier<double> _sliderValue = ValueNotifier(5);
 
   @override
@@ -60,6 +61,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
     _isVerifiedTerms.value = data['isVerifiedTerms'] ?? false;
     _isSpilledHat.value = data['isSpilledHat'] ?? false;
     _isSolutionDomain.value = data['isSolutionDomain'] ?? false;
+    _isUseContext.value = data['isUseContext'] ?? false;
     _sliderValue.value = (data['sliderValue'] ?? 5).toDouble();
 
     return data;
@@ -156,6 +158,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
 
     return Scaffold(
       appBar: AppBar(
+        scrolledUnderElevation: 0,
         title: Text(
           'Problem Settings',
           style: AppStyles.headLineMedium(color: AppStyles.onBackground()),
@@ -222,44 +225,60 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                             color: AppStyles.onBackground()),
                       ),
                       const SizedBox(height: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildSwitch(
-                            label: "Create content: verified terms / GPT",
-                            valueNotifier: _isVerifiedTerms,
-                            firestoreField: 'isVerifiedTerms',
-                          ),
-                          _buildSwitch(
-                            label: "Spilled / non-spilled hat",
-                            valueNotifier: _isSpilledHat,
-                            firestoreField: 'isSpilledHat',
-                          ),
-                          _buildSwitch(
-                            label: "Application domain / Solution",
-                            valueNotifier: _isSolutionDomain,
-                            firestoreField: 'isSolutionDomain',
-                          ),
-                        ],
+                      ValueListenableBuilder<bool>(
+                        valueListenable: _isVerifiedTerms,
+                        builder: (context, isGPTEnabled, child) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSwitch(
+                                label: "Create content: verified terms / GPT",
+                                valueNotifier: _isVerifiedTerms,
+                                firestoreField: 'isVerifiedTerms',
+                                onChanged: (bool newValue) {
+                                  _isVerifiedTerms.value = newValue;
+
+                                  _updateProblemFieldSettings(widget.problemId,
+                                      'isVerifiedTerms', newValue);
+                                },
+                              ),
+                              _buildSwitch(
+                                label: "Spilled / non-spilled hat",
+                                valueNotifier: _isSpilledHat,
+                                firestoreField: 'isSpilledHat',
+                                isEnabled: isGPTEnabled,
+                                onChanged: (bool newValue) {},
+                              ),
+                              _buildSwitch(
+                                label: "Use context",
+                                valueNotifier: _isUseContext,
+                                firestoreField: 'isUseContext',
+                                isEnabled: isGPTEnabled,
+                                onChanged: (bool newValue) {},
+                              ),
+                              _buildSwitch(
+                                label: "Application domain / Solution",
+                                valueNotifier: _isSolutionDomain,
+                                firestoreField: 'isSolutionDomain',
+                                onChanged: (bool newValue) {},
+                              ),
+                            ],
+                          );
+                        },
                       ),
                       const SizedBox(height: 16),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ValueListenableBuilder<double>(
-                            valueListenable: _sliderValue,
-                            builder: (context, value, child) {
-                              return Text(
-                                "How many words to generate (1-10): $value",
+                      ValueListenableBuilder<double>(
+                        valueListenable: _sliderValue,
+                        builder: (context, value, child) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "How many words to generate (1-10): ${value.round()}",
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold),
-                              );
-                            },
-                          ),
-                          ValueListenableBuilder<double>(
-                            valueListenable: _sliderValue,
-                            builder: (context, value, child) {
-                              return Slider(
+                              ),
+                              Slider(
                                 value: value,
                                 min: 1,
                                 max: 10,
@@ -267,16 +286,15 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                                 label: value.round().toString(),
                                 onChanged: (double newValue) async {
                                   _sliderValue.value = newValue;
-                                  // Update Firestore with the new slider value
                                   await _updateProblemFieldSettings(
                                       widget.problemId,
                                       'sliderValue',
                                       newValue);
                                 },
-                              );
-                            },
-                          ),
-                        ],
+                              ),
+                            ],
+                          );
+                        },
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -480,10 +498,65 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
     );
   }
 
+  Widget _buildEditableField({
+    required String label,
+    required TextEditingController controller,
+    required bool isEditing,
+    required VoidCallback onSave,
+    required bool isOwner,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppStyles.titleSmall(color: AppStyles.onBackground()),
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: isEditing
+                  ? TextField(
+                      controller: controller,
+                      decoration: InputDecoration(
+                        labelText: label,
+                        border: OutlineInputBorder(),
+                      ),
+                    )
+                  : Text(
+                      controller.text,
+                      style:
+                          AppStyles.bodyLarge(color: AppStyles.onBackground()),
+                    ),
+            ),
+            if (isOwner)
+              IconButton(
+                icon: Icon(
+                  isEditing ? Icons.check : Icons.edit,
+                  color: Colors.blue,
+                ),
+                onPressed: () {
+                  if (isEditing) {
+                    onSave();
+                  }
+                  setState(() {
+                    isEditing = !isEditing;
+                  });
+                },
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
   Widget _buildSwitch({
     required String label,
     required ValueNotifier<bool> valueNotifier,
-    required String firestoreField, // Add Firestore field name
+    required String firestoreField,
+    required Function(bool) onChanged,
+    bool isEnabled = true,
   }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -494,12 +567,14 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
           builder: (context, value, child) {
             return CupertinoSwitch(
               value: value,
-              onChanged: (bool newValue) async {
-                valueNotifier.value = newValue;
-                // Update Firestore with the new value
-                await _updateProblemFieldSettings(
-                    widget.problemId, firestoreField, newValue);
-              },
+              onChanged: isEnabled
+                  ? (bool newValue) async {
+                      valueNotifier.value = newValue;
+                      await _updateProblemFieldSettings(
+                          widget.problemId, firestoreField, newValue);
+                      onChanged(newValue);
+                    }
+                  : null,
             );
           },
         ),

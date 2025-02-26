@@ -174,14 +174,13 @@ class _SignUpPageState extends State<SignUpPage> {
         bool isAdmin = email.endsWith("@admin.sk");
 
         if (!isAdmin) {
-          // Send email verification ONLY for regular users
           await user.sendEmailVerification();
         }
 
         await _firestore.collection('users').doc(user.uid).set({
           'username': username,
           'email': email,
-          'emailVerified': isAdmin ? true : false, // Admins are auto-verified
+          'emailVerified': isAdmin ? true : false,
         });
 
         if (isAdmin) {

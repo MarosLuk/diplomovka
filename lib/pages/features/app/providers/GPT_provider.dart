@@ -10,6 +10,8 @@ class OpenAIService {
     required Map<String, List<String>> selectedOptionsGroupedBySections,
     required int numberOfWords,
     required bool isSolutionDomain,
+    required bool isSpilledHat,
+    String? problemDescription,
   }) async {
     final url = Uri.parse("https://api.openai.com/v1/chat/completions");
     final headers = {
@@ -17,24 +19,30 @@ class OpenAIService {
       "Authorization": "Bearer $apiKey",
     };
 
-    // Format the selected options as a readable text for GPT
     final String optionsText = selectedOptionsGroupedBySections.entries
         .map((entry) => "${entry.key}: ${entry.value.join(', ')}")
         .join("\n");
 
-    final String domainType =
-        isSolutionDomain ? "riešenia (solution)" : "aplikácie (application)";
+    final String domainType = isSolutionDomain ? "solution" : "application";
+
+    String systemMessage = "I want the response always in English. "
+        "Return exactly $numberOfWords phrases related to software development. "
+        "Use the domain: $domainType. "
+        "Options have to have 1-3 words max."
+        "Selected sections and options:\n$optionsText";
+
+    if (problemDescription != null && problemDescription.isNotEmpty) {
+      systemMessage +=
+          "\n\nProblem Description: $problemDescription"; // ✅ Include problem description if needed
+    }
+
+    if (isSpilledHat) {
+      systemMessage +=
+          "\n\n25% of options, have to be some random thing absolutely outside of software scope."; // ✅ Add Spilled Hat behavior
+    }
 
     final messages = [
-      {
-        "role": "system",
-        "content": "I want the response always in English. "
-            "The options should be without numbering or any labels at the beginning. "
-            "Return exactly $numberOfWords phrases related to software development "
-            "for the problem described by the user. "
-            "Use the domain: $domainType. "
-            "Selected sections and options:\n$optionsText"
-      }
+      {"role": "system", "content": systemMessage}
     ];
 
     final bodyMap = {
@@ -53,11 +61,41 @@ class OpenAIService {
         final reply = data["choices"][0]["message"]["content"];
         return reply.trim();
       } else {
-        print("❌ OpenAI API error: ${response.body}");
+        print("OpenAI API error: ${response.body}");
         throw Exception("Error from OpenAI: ${response.statusCode}");
       }
     } catch (e) {
-      print("❌ Error calling OpenAI: $e");
+      print("Error calling OpenAI: $e");
+      rethrow;
+    }
+  }
+
+  Future<String> _fetchGPTResponse(
+      Uri url, Map<String, String> headers, String systemPrompt) async {
+    final messages = [
+      {"role": "system", "content": systemPrompt}
+    ];
+
+    final bodyMap = {
+      "model": "gpt-4o",
+      "messages": messages,
+      "temperature": 0.7,
+    };
+
+    final body = utf8.encode(jsonEncode(bodyMap));
+
+    try {
+      final response = await http.post(url, headers: headers, body: body);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+        return data["choices"][0]["message"]["content"].trim();
+      } else {
+        print("OpenAI API error: ${response.body}");
+        throw Exception("Error from OpenAI: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Error calling OpenAI: $e");
       rethrow;
     }
   }

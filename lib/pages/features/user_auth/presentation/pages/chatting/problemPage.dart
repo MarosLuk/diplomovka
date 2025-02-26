@@ -16,23 +16,29 @@ import 'package:diplomovka/pages/features/app/providers/problem_provider.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/chatting/problemSpec.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
-class SelectionNotifier extends StateNotifier<Map<String, bool>> {
-  SelectionNotifier() : super({});
+class SelectionNotifier extends StateNotifier<Map<String, dynamic>> {
+  SelectionNotifier() : super({"selections": {}, "isLoading": false});
 
   void toggleSelection(String option) {
     state = {
       ...state,
-      option: !(state[option] ?? false),
+      "selections": {
+        ...state["selections"],
+        option: !(state["selections"][option] ?? false),
+      },
     };
   }
 
   void clearSelections() {
-    state = {};
+    state = {"selections": {}, "isLoading": false};
   }
+
+  bool get isLoading => state["isLoading"];
 
   Map<String, List<String>> getSelectedOptionsGroupedBySections(
       List<Map<String, dynamic>> sections) {
     final selectedGroupedBySections = <String, List<String>>{};
+    final selections = state["selections"];
 
     for (var section in sections) {
       final sectionTitle = section['title'] as String;
@@ -41,7 +47,7 @@ class SelectionNotifier extends StateNotifier<Map<String, bool>> {
           .toList();
 
       final selectedOptionsForSection =
-          sectionOptions.where((option) => state[option] == true).toList();
+          sectionOptions.where((option) => selections[option] == true).toList();
 
       if (selectedOptionsForSection.isNotEmpty) {
         selectedGroupedBySections[sectionTitle] = selectedOptionsForSection;
@@ -64,13 +70,15 @@ class SelectionNotifier extends StateNotifier<Map<String, bool>> {
     return problemData['isVerifiedTerms'] ?? false;
   }
 
-  void saveSelections(
+  Future<void> saveSelections(
       WidgetRef ref,
       BuildContext context,
       String problemId,
       List<Map<String, dynamic>> sections,
       Map<String, dynamic> rawOptionContent) async {
     try {
+      state = {...state, "isLoading": true};
+      Navigator.of(context).pop();
       final selectedGrouped = getSelectedOptionsGroupedBySections(sections);
       print("Selected options grouped by sections: $selectedGrouped");
 
@@ -83,25 +91,26 @@ class SelectionNotifier extends StateNotifier<Map<String, bool>> {
       final generatedWords =
           await generateSectionWords(sections, selectedGrouped, problemId);
 
-      int generationType = isGPTGenerated ? 0 : 1; // 0 = AI, 1 = Manual
+      int generationType = isGPTGenerated ? 0 : 1;
 
       await ref
           .read(problemProvider.notifier)
           .addContainersToProblem(problemId, generatedWords, generationType);
 
-      Navigator.of(context).pop();
       clearSelections();
     } catch (e) {
       showToast(
         message: "Error in saveSelections: $e",
         isError: true,
       );
+    } finally {
+      state = {...state, "isLoading": false};
     }
   }
 }
 
 final selectionProvider =
-    StateNotifierProvider<SelectionNotifier, Map<String, bool>>(
+    StateNotifierProvider<SelectionNotifier, Map<String, dynamic>>(
   (ref) => SelectionNotifier(),
 );
 
@@ -240,10 +249,16 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
                           ),
                         ),
                         GestureDetector(
-                          onTap: () => ref
-                              .read(selectionProvider.notifier)
-                              .saveSelections(ref, context, widget.problemId,
-                                  sectionsData, optionContent),
+                          onTap: ref.watch(selectionProvider)["isLoading"]
+                              ? null
+                              : () => ref
+                                  .read(selectionProvider.notifier)
+                                  .saveSelections(
+                                      ref,
+                                      context,
+                                      widget.problemId,
+                                      sectionsData,
+                                      optionContent),
                           child: Container(
                             width: 100,
                             height: 54,
@@ -252,11 +267,14 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Center(
-                              child: Text(
-                                "Save",
-                                style: AppStyles.headLineSmall(
-                                    color: Colors.black),
-                              ),
+                              child: ref.watch(selectionProvider)["isLoading"]
+                                  ? CircularProgressIndicator(
+                                      color: Colors.black)
+                                  : Text(
+                                      "Save",
+                                      style: AppStyles.headLineSmall(
+                                          color: Colors.black),
+                                    ),
                             ),
                           ),
                         ),
@@ -278,8 +296,10 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
                           },
                           child: Consumer(
                             builder: (context, ref, _) {
-                              final isSelected =
-                                  ref.watch(selectionProvider)[focus] ?? false;
+                              final selections = Map<String, bool>.from(
+                                  ref.watch(selectionProvider)["selections"]);
+                              final isSelected = selections[focus] ?? false;
+
                               return Container(
                                 height: 50,
                                 margin: const EdgeInsets.only(bottom: 8),
@@ -331,6 +351,7 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isLoading = ref.watch(selectionProvider)["isLoading"] ?? false;
     final problem = ref.watch(problemProvider).firstWhere(
           (p) => p.problemId == widget.problemId,
           orElse: () => ProblemModel(
@@ -341,166 +362,178 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
           ),
         );
 
-    return Scaffold(
-      appBar: AppBar(
-        iconTheme: IconThemeData(
-          color: AppStyles.onBackground(),
-        ),
-        title: Text(
-          problem.problemName,
-          style: TextStyle(color: AppStyles.onBackground()),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.settings,
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: AppBar(
+            iconTheme: IconThemeData(
               color: AppStyles.onBackground(),
             ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      SettingsProblemPage(problemId: widget.problemId),
+            title: Text(
+              problem.problemName,
+              style: TextStyle(color: AppStyles.onBackground()),
+            ),
+            actions: [
+              IconButton(
+                icon: Icon(
+                  Icons.settings,
+                  color: AppStyles.onBackground(),
                 ),
-              );
-            },
-          ),
-          IconButton(
-            icon: Icon(Icons.add, color: AppStyles.onBackground()),
-            onPressed: () => _showAddContainerDialog(context, ref),
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8),
-        child: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  itemCount: problem.containers.length,
-                  itemBuilder: (context, index) {
-                    final container = problem.containers[index];
-
-                    return Slidable(
-                      key: Key(container.containerId), // Unique identifier
-                      endActionPane: ActionPane(
-                        motion: const DrawerMotion(), // Smooth sliding effect
-                        children: [
-                          SlidableAction(
-                            onPressed: (context) async {
-                              await ref
-                                  .read(problemProvider.notifier)
-                                  .deleteContainer(
-                                      widget.problemId, container.containerId);
-                              showToast(
-                                  message: "Container deleted", isError: false);
-                            },
-                            backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
-                            icon: Icons.delete,
-                            label: 'Delete',
-                            borderRadius:
-                                BorderRadius.circular(100), // Rounded corners
-                            padding: EdgeInsets.symmetric(
-                                vertical: 12, horizontal: 16),
-                          ),
-                        ],
-                      ),
-                      child: LongPressDraggable<ContainerModel>(
-                        data: container,
-                        feedback: Material(
-                          color: Colors.transparent,
-                          child: Container(
-                            padding: const EdgeInsets.all(8.0),
-                            decoration: BoxDecoration(
-                              color: Colors.blueAccent.withOpacity(0.8),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              container.containerName,
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                          ),
-                        ),
-                        childWhenDragging: Opacity(
-                          opacity: 0.5,
-                          child: buildContainerTile(context, container),
-                        ),
-                        child: DragTarget<ContainerModel>(
-                          builder: (BuildContext context,
-                              List<ContainerModel?> candidateData,
-                              List<dynamic> rejectedData) {
-                            final isDraggingOver = candidateData.isNotEmpty;
-                            return Container(
-                              margin: const EdgeInsets.symmetric(vertical: 6.0),
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  width: 2,
-                                  color: isDraggingOver
-                                      ? Colors.green
-                                      : AppStyles.onBackground(),
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: buildContainerTile(context, container),
-                            );
-                          },
-                          onWillAccept: (draggedContainer) {
-                            if (draggedContainer == null) return false;
-                            return draggedContainer.containerId !=
-                                container.containerId;
-                          },
-                          onAccept: (draggedContainer) async {
-                            await ref
-                                .read(problemProvider.notifier)
-                                .mergeContainers(widget.problemId, container,
-                                    draggedContainer);
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          SettingsProblemPage(problemId: widget.problemId),
+                    ),
+                  );
+                },
               ),
-              GestureDetector(
-                onTap: () => specificationBottomSheet(context, ref),
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                    child: Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: AppStyles.Primary50(),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.add,
-                              color: AppStyles.onBackground(),
-                            ),
-                            SizedBox(width: 4),
-                            Text(
-                              "Inspiration",
-                              style: AppStyles.headLineSmall(
-                                color: Colors.white,
+              IconButton(
+                icon: Icon(Icons.add, color: AppStyles.onBackground()),
+                onPressed: () => _showAddContainerDialog(context, ref),
+              ),
+            ],
+          ),
+          body: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: problem.containers.length,
+                      itemBuilder: (context, index) {
+                        final container = problem.containers[index];
+
+                        return Slidable(
+                          key: Key(container.containerId),
+                          endActionPane: ActionPane(
+                            motion: const DrawerMotion(),
+                            children: [
+                              SlidableAction(
+                                onPressed: (context) async {
+                                  await ref
+                                      .read(problemProvider.notifier)
+                                      .deleteContainer(widget.problemId,
+                                          container.containerId);
+                                  showToast(
+                                      message: "Container deleted",
+                                      isError: false);
+                                },
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                icon: Icons.delete,
+                                label: 'Delete',
+                                borderRadius: BorderRadius.circular(100),
+                                padding: EdgeInsets.symmetric(
+                                    vertical: 12, horizontal: 16),
+                              ),
+                            ],
+                          ),
+                          child: LongPressDraggable<ContainerModel>(
+                            data: container,
+                            feedback: Material(
+                              color: Colors.transparent,
+                              child: Container(
+                                padding: const EdgeInsets.all(8.0),
+                                decoration: BoxDecoration(
+                                  color: Colors.blueAccent.withOpacity(0.8),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  container.containerName,
+                                  style: const TextStyle(color: Colors.white),
+                                ),
                               ),
                             ),
-                          ],
+                            childWhenDragging: Opacity(
+                              opacity: 0.5,
+                              child: buildContainerTile(context, container),
+                            ),
+                            child: DragTarget<ContainerModel>(
+                              builder: (BuildContext context,
+                                  List<ContainerModel?> candidateData,
+                                  List<dynamic> rejectedData) {
+                                final isDraggingOver = candidateData.isNotEmpty;
+                                return Container(
+                                  margin:
+                                      const EdgeInsets.symmetric(vertical: 6.0),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      width: 2,
+                                      color: isDraggingOver
+                                          ? Colors.green
+                                          : AppStyles.onBackground(),
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: buildContainerTile(context, container),
+                                );
+                              },
+                              onWillAccept: (draggedContainer) {
+                                if (draggedContainer == null) return false;
+                                return draggedContainer.containerId !=
+                                    container.containerId;
+                              },
+                              onAccept: (draggedContainer) async {
+                                await ref
+                                    .read(problemProvider.notifier)
+                                    .mergeContainers(widget.problemId,
+                                        container, draggedContainer);
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => specificationBottomSheet(context, ref),
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                        child: Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: AppStyles.Primary50(),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.add,
+                                  color: AppStyles.onBackground(),
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  "Inspiration",
+                                  style: AppStyles.headLineSmall(
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
-      ),
+        if (isLoading)
+          Container(
+            color: Colors.black.withOpacity(0.5),
+            child: Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            ),
+          ),
+      ],
     );
   }
 
@@ -514,8 +547,7 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
         ),
       ),
       trailing: Row(
-        mainAxisSize: MainAxisSize
-            .min, // Ensures the Row takes up only the necessary space
+        mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),

@@ -38,7 +38,6 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
 
   Future<void> _fetchUserDetails() async {
     try {
-      // Fetch user data
       DocumentSnapshot userDoc =
           await _firestore.collection('users').doc(widget.userId).get();
 
@@ -47,7 +46,6 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
         _usernameController.text = userDoc['username'];
       }
 
-      // Fetch owned problems
       QuerySnapshot ownedSnapshot = await _firestore
           .collection('problems')
           .where('userId', isEqualTo: widget.userId)
@@ -60,7 +58,6 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
         };
       }).toList();
 
-      // Fetch collaborated problems
       QuerySnapshot collaboratedSnapshot = await _firestore
           .collection('problems')
           .where('collaborators', arrayContains: widget.email)
@@ -74,10 +71,9 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
         };
       }).toList();
 
-      // 🔹 Fetch invites (FIXED FIELD NAME)
       QuerySnapshot invitesSnapshot = await _firestore
           .collection('invites')
-          .where('invitedEmail', isEqualTo: widget.email) // ✅ Fixed
+          .where('invitedEmail', isEqualTo: widget.email)
           .get();
 
       List<Map<String, dynamic>> invitesList = invitesSnapshot.docs.map((doc) {
@@ -108,18 +104,14 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
     });
 
     try {
-      // Update email and username in Firestore
       await _firestore.collection('users').doc(widget.userId).update({
         'email': _emailController.text,
         'username': _usernameController.text,
       });
-
-      // If a new password is entered, update it in Firebase Authentication
       if (_passwordController.text.isNotEmpty) {
         User? user = _auth.currentUser;
 
         if (user != null) {
-          // Re-authenticate the user before changing password
           bool reauthenticated = await _reauthenticateUser(user);
           if (reauthenticated) {
             await user.updatePassword(_passwordController.text);
@@ -150,7 +142,6 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
     }
   }
 
-  /// 🔹 **Helper Function: Re-authenticate User**
   Future<bool> _reauthenticateUser(User user) async {
     try {
       String? currentPassword = await _showReauthDialog();
@@ -162,9 +153,9 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
         );
 
         await user.reauthenticateWithCredential(credential);
-        return true; // ✅ Re-authentication successful
+        return true;
       } else {
-        return false; // ❌ User canceled re-authentication
+        return false;
       }
     } catch (e) {
       print("Re-authentication error: $e");
@@ -172,7 +163,6 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
     }
   }
 
-  /// 🔹 **Helper Function: Show Re-authentication Dialog**
   Future<String?> _showReauthDialog() async {
     TextEditingController passwordController = TextEditingController();
 
@@ -197,13 +187,12 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context, null), // Cancel
+              onPressed: () => Navigator.pop(context, null),
               child: Text("Cancel"),
             ),
             TextButton(
               onPressed: () {
-                Navigator.pop(
-                    context, passwordController.text); // Return password
+                Navigator.pop(context, passwordController.text);
               },
               child: Text("Confirm"),
             ),
@@ -218,18 +207,17 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
     final query = await usersRef.where('email', isEqualTo: email).get();
 
     if (query.docs.isNotEmpty) {
-      print("✅ Email exists in Firestore.");
+      print("Email exists in Firestore.");
     } else {
-      print("❌ Email not found in Firestore.");
+      print("Email not found in Firestore.");
     }
   }
 
   Future<void> _verifyAndSendPasswordReset() async {
     final email = _emailController.text.trim().toLowerCase();
 
-    // ✅ If we reach here, the user exists
     await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-    print("✅ Password reset email sent to $email");
+    print("Password reset email sent to $email");
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Password reset email sent to $email")),
     );
@@ -314,18 +302,16 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                       ),
                       onPressed: () {
                         setState(() {
-                          obscureText =
-                              !obscureText; // Toggle password visibility
+                          obscureText = !obscureText;
                         });
                       },
                     ),
                     IconButton(
                       icon: Icon(
                         Icons.lock_reset,
-                        color: Colors.red, // Reset icon
+                        color: Colors.red,
                       ),
-                      onPressed:
-                          _verifyAndSendPasswordReset, // Trigger reset email
+                      onPressed: _verifyAndSendPasswordReset,
                     ),
                   ],
                 ),
@@ -340,7 +326,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
 
   Widget _buildEditableField(String label, TextEditingController controller,
       {bool isPassword = false}) {
-    bool obscureText = isPassword; // Default to true for passwords
+    bool obscureText = isPassword;
 
     return StatefulBuilder(
       builder: (context, setState) {
@@ -372,7 +358,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                         ),
                         onPressed: () {
                           setState(() {
-                            obscureText = !obscureText; // Toggle visibility
+                            obscureText = !obscureText;
                           });
                         },
                       )
@@ -427,7 +413,6 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                         ),
                       ),
                       onTap: () {
-                        // Navigate to the problem details
                         Navigator.push(
                           context,
                           MaterialPageRoute(
