@@ -30,6 +30,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
   final ValueNotifier<bool> _isSolutionDomain = ValueNotifier(false);
   final ValueNotifier<bool> _isUseContext = ValueNotifier(false);
   final ValueNotifier<double> _sliderValue = ValueNotifier(5);
+  final ValueNotifier<bool> _isSharedHat = ValueNotifier(false);
 
   @override
   void initState() {
@@ -63,6 +64,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
     _isSolutionDomain.value = data['isSolutionDomain'] ?? false;
     _isUseContext.value = data['isUseContext'] ?? false;
     _sliderValue.value = (data['sliderValue'] ?? 1).toDouble();
+    _isSharedHat.value = data['isSharedHat'] ?? false;
 
     return data;
   }
@@ -297,6 +299,19 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                         },
                       ),
                       const SizedBox(height: 16),
+                      Text(
+                        "Share Creative Hat",
+                        style: AppStyles.headLineSmall(
+                          color: AppStyles.onBackground(),
+                        ),
+                      ),
+                      _buildSwitch(
+                        label: "Share Creative Hat",
+                        valueNotifier: _isSharedHat,
+                        firestoreField: 'isSharedHat',
+                        onChanged: (bool newValue) {},
+                      ),
+                      const SizedBox(height: 12),
                       Text(
                         "Problem Details",
                         style: AppStyles.headLineSmall(

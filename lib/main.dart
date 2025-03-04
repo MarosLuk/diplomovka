@@ -1,3 +1,4 @@
+import 'package:diplomovka/pages/defaultPage.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/admin/statisticsPage.dart';
 import 'package:diplomovka/pages/features/user_auth/secureStorage/authCheck.dart';
 import 'package:diplomovka/pages/features/user_auth/secureStorage/secureStorageService.dart';
@@ -128,7 +129,7 @@ class _MyAppState extends State<MyApp> {
                 initialRoute: '/',
                 routes: {
                   '/': (context) => const AuthCheck(),
-                  '/home': (context) => const HomePage(),
+                  '/home': (context) => const DefaultPage(),
                   '/login': (context) => const LoginPage(),
                   '/signUp': (context) => const SignUpPage(),
                   '/admin': (context) => const AdminHomePage(),
