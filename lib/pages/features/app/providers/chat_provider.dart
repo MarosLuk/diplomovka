@@ -289,8 +289,12 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
     }
   }
 
-  Future<void> sendMessage(String problemId, String chatId, String message,
-      String senderEmail) async {
+  Future<void> sendMessage(
+    String problemId,
+    String chatId,
+    String message,
+    String senderEmail,
+  ) async {
     try {
       final newMessage = {
         'message': message,
@@ -305,39 +309,57 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
           throw Exception("Problem does not exist");
         }
 
-        List<dynamic> containers = snapshot.get('containers') ?? [];
-        final containerIndex =
-            containers.indexWhere((c) => c['containerId'] == chatId);
+        if (chatId == "messagesProblem") {
+          List<dynamic> problemMessages =
+              snapshot.data()?['messagesProblem'] ?? [];
+          problemMessages.add(newMessage);
 
-        if (containerIndex == -1) {
-          throw Exception("Container does not exist");
+          transaction.update(problemDocRef, {
+            'messagesProblem': problemMessages,
+          });
+        } else {
+          List<dynamic> containers = snapshot.data()?['containers'] ?? [];
+          final containerIndex = containers.indexWhere(
+            (c) => c['containerId'] == chatId,
+          );
+
+          if (containerIndex == -1) {
+            throw Exception("Container does not exist");
+          }
+
+          List<dynamic> messages = containers[containerIndex]['messages'] ?? [];
+          messages.add(newMessage);
+
+          containers[containerIndex]['messages'] = messages;
+          transaction.update(problemDocRef, {'containers': containers});
         }
-
-        List<dynamic> messages = containers[containerIndex]['messages'] ?? [];
-        messages.add(newMessage);
-
-        containers[containerIndex]['messages'] = messages;
-
-        transaction.update(problemDocRef, {'containers': containers});
       });
 
-      final chatModel = state.firstWhere((chat) => chat.chatId == chatId);
-      chatModel.messages.add({
-        'message': message,
-        'senderEmail': senderEmail,
-      });
-
-      state = [
-        for (final chat in state)
-          if (chat.chatId == chatId)
-            ChatModel(
-              chatId: chat.chatId,
-              chatName: chat.chatName,
-              messages: chatModel.messages,
-            )
-          else
-            chat,
-      ];
+      final chatModelIndex = state.indexWhere((chat) => chat.chatId == chatId);
+      if (chatModelIndex == -1) {
+        final newChatModel = ChatModel(
+          chatId: chatId,
+          chatName: (chatId == "messagesProblem")
+              ? "Whole Problem Chat"
+              : "Unknown Container Chat",
+          messages: [newMessage],
+        );
+        state = [...state, newChatModel];
+      } else {
+        final updatedMessages = [
+          ...state[chatModelIndex].messages,
+          newMessage,
+        ];
+        final updatedChat = ChatModel(
+          chatId: state[chatModelIndex].chatId,
+          chatName: state[chatModelIndex].chatName,
+          messages: updatedMessages,
+        );
+        state = [
+          for (int i = 0; i < state.length; i++)
+            if (i == chatModelIndex) updatedChat else state[i],
+        ];
+      }
     } catch (e) {
       print("Error sending message: $e");
       throw e;
@@ -345,7 +367,9 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
   }
 
   Future<List<Map<String, dynamic>>> fetchMessages(
-      String problemId, String containerId) async {
+    String problemId,
+    String containerId,
+  ) async {
     try {
       final problemDoc =
           await _firestore.collection('problems').doc(problemId).get();
@@ -354,35 +378,55 @@ class ChatNotifier extends StateNotifier<List<ChatModel>> {
         throw Exception("Problem does not exist");
       }
 
-      final containers = problemDoc.data()?['containers'] ?? [];
+      if (containerId == "messagesProblem") {
+        final messages = List<Map<String, dynamic>>.from(
+          problemDoc.data()?['messagesProblem'] ?? [],
+        );
 
-      final container = containers.firstWhere(
-        (c) => c['containerId'] == containerId,
-        orElse: () => null,
-      );
+        final updatedChatModel = ChatModel(
+          chatId: containerId,
+          chatName: "Whole Problem Chat",
+          messages: messages,
+        );
 
-      if (container == null) {
-        throw Exception("Container does not exist");
+        state = [
+          for (final chat in state)
+            if (chat.chatId == containerId) updatedChatModel else chat,
+          if (!state.any((chat) => chat.chatId == containerId))
+            updatedChatModel,
+        ];
+
+        return messages;
+      } else {
+        final containers = problemDoc.data()?['containers'] ?? [];
+        final container = containers.firstWhere(
+          (c) => c['containerId'] == containerId,
+          orElse: () => null,
+        );
+
+        if (container == null) {
+          throw Exception("Container does not exist");
+        }
+
+        final messages = List<Map<String, dynamic>>.from(
+          container['messages'] ?? [],
+        );
+
+        final updatedChatModel = ChatModel(
+          chatId: containerId,
+          chatName: container['containerName'] ?? 'Unknown',
+          messages: messages,
+        );
+
+        state = [
+          for (final chat in state)
+            if (chat.chatId == containerId) updatedChatModel else chat,
+          if (!state.any((chat) => chat.chatId == containerId))
+            updatedChatModel,
+        ];
+
+        return messages;
       }
-
-      final messages =
-          List<Map<String, dynamic>>.from(container['messages'] ?? []);
-
-      final updatedChatModel = ChatModel(
-        chatId: containerId,
-        chatName: container['containerName'] ?? 'Unknown',
-        messages: messages,
-      );
-
-      state = [
-        for (final chat in state)
-          if (chat.chatId == containerId) updatedChatModel else chat,
-        if (!state.any((chat) => chat.chatId == containerId)) updatedChatModel,
-      ];
-
-      state = [...state];
-
-      return messages;
     } catch (e) {
       print("Error fetching messages: $e");
       return [];

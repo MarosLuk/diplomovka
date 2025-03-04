@@ -525,6 +525,11 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
               ),
             ),
           ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () => _openProblemChat(context, problem),
+            backgroundColor: Colors.blueAccent,
+            child: Icon(Icons.chat, color: Colors.white),
+          ),
         ),
         if (isLoading)
           Container(
@@ -534,6 +539,26 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
             ),
           ),
       ],
+    );
+  }
+
+  void _openProblemChat(BuildContext context, ProblemModel problem) async {
+    final firestore = FirebaseFirestore.instance;
+    final problemRef = firestore.collection('problems').doc(widget.problemId);
+
+    await problemRef.set({
+      'messagesProblem': FieldValue.arrayUnion([]),
+    }, SetOptions(merge: true));
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChatPage(
+          problemId: widget.problemId,
+          chatId: "messagesProblem",
+          containerName: problem.problemName,
+        ),
+      ),
     );
   }
 

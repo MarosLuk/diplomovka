@@ -62,7 +62,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
     _isSpilledHat.value = data['isSpilledHat'] ?? false;
     _isSolutionDomain.value = data['isSolutionDomain'] ?? false;
     _isUseContext.value = data['isUseContext'] ?? false;
-    _sliderValue.value = (data['sliderValue'] ?? 5).toDouble();
+    _sliderValue.value = (data['sliderValue'] ?? 1).toDouble();
 
     return data;
   }
@@ -274,7 +274,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "How many words to generate (1-10): ${value.round()}",
+                                "How many words to pick from Hat (1-10): ${value.round()}",
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold),
                               ),
