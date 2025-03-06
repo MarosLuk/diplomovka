@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:diplomovka/pages/features/app/providers/problem_provider.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/chatting/problemPage.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
+
+import '../../../app/global/toast.dart';
 
 class MyHatsPage extends ConsumerWidget {
   const MyHatsPage({Key? key}) : super(key: key);
@@ -14,7 +17,7 @@ class MyHatsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'My Problems',
+          'My Hats',
           style: TextStyle(color: Colors.white),
         ),
       ),
@@ -42,10 +45,55 @@ class MyHatsPage extends ConsumerWidget {
                   ),
                 );
               },
+              onLongPress: () =>
+                  _showDeleteDialog(context, problem.problemId, ref),
             ),
           );
         },
       ),
     );
+  }
+
+  void _showDeleteDialog(
+      BuildContext context, String problemId, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppStyles.Primary50(),
+        title: const Text("Delete Problem"),
+        content: const Text(
+            "Are you sure you want to delete this problem? This action cannot be undone."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _deleteProblem(problemId, ref);
+            },
+            child: const Text("Delete", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteProblem(String problemId, WidgetRef ref) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('problems')
+          .doc(problemId)
+          .delete();
+
+      ref.read(problemProvider.notifier).removeProblem(problemId);
+
+      debugPrint("Problem deleted successfully!");
+      showToast(message: "Problem deleted successfully!", isError: false);
+    } catch (e) {
+      debugPrint("Error deleting problem: $e");
+      showToast(message: "Error deleting problem: $e", isError: true);
+    }
   }
 }

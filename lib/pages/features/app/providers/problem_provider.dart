@@ -25,12 +25,33 @@ class ContainerModel {
   String containerId;
   String containerName;
   List<Map<String, dynamic>> messages;
+  String generatedBy;
 
   ContainerModel({
     required this.containerId,
     required this.containerName,
     required this.messages,
+    required this.generatedBy,
   });
+
+  factory ContainerModel.fromFirestore(Map<String, dynamic> data) {
+    return ContainerModel(
+      containerId: data['containerId'] ?? '',
+      containerName: data['containerName'] ?? 'Unnamed Container',
+      messages: List<Map<String, dynamic>>.from(data['messages'] ?? []),
+      generatedBy: data['generatedBy'] ?? 'Unknown',
+    );
+  }
+
+  // ✅ Convert the model to a Firestore-compatible format
+  Map<String, dynamic> toFirestore() {
+    return {
+      'containerId': containerId,
+      'containerName': containerName,
+      'messages': messages,
+      'generatedBy': generatedBy,
+    };
+  }
 }
 
 class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
@@ -41,6 +62,10 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
   }
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  void removeProblem(String problemId) {
+    state = state.where((problem) => problem.problemId != problemId).toList();
+  }
 /*
   Future<void> uploadSpecificationsWithVotesToFirestore() async {
     final FirebaseFirestore firestore = FirebaseFirestore.instance;
@@ -89,7 +114,7 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
         throw Exception("Problem does not exist");
       }
 
-      List containers = snapshot.get('containers');
+      List<dynamic> containers = snapshot.get('containers');
       final targetIndex = containers
           .indexWhere((c) => c['containerId'] == targetContainer.containerId);
       final draggedIndex = containers
@@ -99,8 +124,11 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
         throw Exception("Containers not found in the problem data");
       }
 
+      String newGeneratedBy = "User";
+
       containers[targetIndex]['containerName'] =
           "${targetContainer.containerName} + ${draggedContainer.containerName}";
+      containers[targetIndex]['generatedBy'] = newGeneratedBy;
 
       containers.removeAt(draggedIndex);
 
@@ -119,10 +147,10 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
               containerId: c.containerId,
               containerName:
                   "${targetContainer.containerName} + ${draggedContainer.containerName}",
+              generatedBy: "User",
               messages: c.messages,
             );
           }
-
           return c;
         }).toList();
 
@@ -230,6 +258,7 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
                 containerData['containerName'] ?? 'Unnamed Container',
             messages: List<Map<String, dynamic>>.from(
                 containerData['messages'] ?? []),
+            generatedBy: containerData['generatedBy'] ?? 'Unknown',
           );
         }).toList();
 

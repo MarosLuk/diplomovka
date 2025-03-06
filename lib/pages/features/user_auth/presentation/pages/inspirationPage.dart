@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
 
+import '../../../app/global/toast.dart';
 import 'inspirationFoundedPage.dart';
 
 class InspirationPage extends ConsumerStatefulWidget {
@@ -131,7 +133,7 @@ class _InspirationPageState extends ConsumerState<InspirationPage> {
         });
       }
     } catch (e) {
-      debugPrint("Error fetching problems: $e");
+      debugPrint("Error fetching Hats: $e");
     } finally {
       setState(() => _isLoading = false);
     }
@@ -161,6 +163,62 @@ class _InspirationPageState extends ConsumerState<InspirationPage> {
     _resetAndFetch();
   }
 
+  Future<void> _copyProblem(Map<String, dynamic> problem) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      debugPrint("User not logged in!");
+      return;
+    }
+
+    try {
+      final newProblem = {
+        'problemName': problem['problemName'],
+        'problemDescription': problem['problemDescription'],
+        'creationDateTime': FieldValue.serverTimestamp(),
+        'containers': problem['containers'],
+        'messagesProblem': [],
+        'isSpilledHat': problem['isSpilledHat'],
+        'isUseContext': problem['isUseContext'],
+        'isSolutionDomain': problem['isSolutionDomain'],
+        'isVerifiedTerms': problem['isVerifiedTerms'],
+        'sliderValue': problem['sliderValue'],
+        'userId': userId,
+      };
+
+      await FirebaseFirestore.instance.collection('problems').add(newProblem);
+      debugPrint("Hat copied successfully!");
+      showToast(message: "Hat copied successfully!", isError: false);
+    } catch (e) {
+      debugPrint("Error copying Hat: $e");
+      showToast(message: "Error copying Hat: $e", isError: true);
+    }
+  }
+
+  void _showCopyDialog(Map<String, dynamic> problem) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppStyles.Primary50(),
+        title: const Text("Copy Problem"),
+        content: const Text(
+            "Do you want to copy this inspiration Hat to your Hats?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _copyProblem(problem);
+            },
+            child: const Text("Copy"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -175,7 +233,7 @@ class _InspirationPageState extends ConsumerState<InspirationPage> {
             child: TextField(
               controller: _searchController,
               decoration: const InputDecoration(
-                labelText: "Search problem name...",
+                labelText: "Search Hat name...",
                 labelStyle: TextStyle(color: Colors.white),
                 border: OutlineInputBorder(),
               ),
@@ -339,6 +397,7 @@ class _InspirationPageState extends ConsumerState<InspirationPage> {
                               ),
                             );
                           },
+                          onLongPress: () => _showCopyDialog(problem),
                         ),
                       );
                     },

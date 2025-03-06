@@ -563,6 +563,8 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
   }
 
   Widget buildContainerTile(BuildContext context, ContainerModel container) {
+    bool isManualGenerated = container.generatedBy == "User";
+
     return ListTile(
       title: Padding(
         padding: const EdgeInsets.all(8.0),
@@ -574,47 +576,49 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: () {
-              regenerateContainer(
-                context,
-                widget.problemId,
-                container.containerId,
-                container.containerName,
-                ref,
-              );
-            },
-          ),
-          IconButton(
-            icon: Icon(Icons.info_outline, color: AppStyles.Primary50()),
-            onPressed: () {
-              final parts = container.containerName.split(": ");
-              if (parts.length == 2) {
-                final section = parts[0].trim();
-                final option = parts[1].trim();
+          if (!isManualGenerated)
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              onPressed: () {
+                regenerateContainer(
+                  context,
+                  widget.problemId,
+                  container.containerId,
+                  container.containerName,
+                  ref,
+                );
+              },
+            ),
+          if (!isManualGenerated)
+            IconButton(
+              icon: Icon(Icons.info_outline, color: AppStyles.Primary50()),
+              onPressed: () {
+                final parts = container.containerName.split(": ");
+                if (parts.length == 2) {
+                  final section = parts[0].trim();
+                  final option = parts[1].trim();
 
-                final subsections = sectionToSubsections[section];
-                if (subsections != null) {
-                  showVoteDialog(context, subsections, option, ref);
+                  final subsections = sectionToSubsections[section];
+                  if (subsections != null) {
+                    showVoteDialog(context, subsections, option, ref);
+                  } else {
+                    print("Section not found in mapping: $section");
+                    showToast(
+                      message: "Section not found in mapping: $section",
+                      isError: true,
+                    );
+                  }
                 } else {
-                  print("Section not found in mapping: $section");
+                  print(
+                      "Invalid container name format: ${container.containerName}");
                   showToast(
-                    message: "Section not found in mapping: $section",
+                    message:
+                        "Invalid container name format: ${container.containerName}",
                     isError: true,
                   );
                 }
-              } else {
-                print(
-                    "Invalid container name format: ${container.containerName}");
-                showToast(
-                  message:
-                      "Invalid container name format: ${container.containerName}",
-                  isError: true,
-                );
-              }
-            },
-          ),
+              },
+            ),
         ],
       ),
       onTap: () {

@@ -32,13 +32,12 @@ class OpenAIService {
         "Selected sections and options:\n$optionsText";
 
     if (problemDescription != null && problemDescription.isNotEmpty) {
-      systemMessage +=
-          "\n\nProblem Description: $problemDescription"; // ✅ Include problem description if needed
+      systemMessage += "\n\nProblem Description: $problemDescription";
     }
 
     if (isSpilledHat) {
       systemMessage +=
-          "\n\n25% of options, have to be some random thing absolutely outside of software scope."; // ✅ Add Spilled Hat behavior
+          "\n\n25% of options, have to be some random thing absolutely outside of software scope. Just option without note."; // ✅ Add Spilled Hat behavior
     }
 
     final messages = [
