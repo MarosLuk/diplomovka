@@ -29,7 +29,6 @@ class _DefaultPageState extends ConsumerState<DefaultPage> {
 
   final List<Widget> _pages = [
     const HomePage(),
-    const InspirationPage(),
     const MyHatsPage(),
     const InspirationPage(),
     ProfilePage(),
@@ -78,27 +77,20 @@ class _DefaultPageState extends ConsumerState<DefaultPage> {
                 _buildBottomNavItem(
                   context,
                   1,
-                  'Inspiration',
-                  'dietActive',
-                  'dietInactive',
-                ),
-                _buildBottomNavItem(
-                  context,
-                  2,
                   'My Hats',
                   'mindActive',
                   'mindInactive',
                 ),
                 _buildBottomNavItem(
                   context,
-                  3,
+                  2,
                   'Inspiration',
                   'recoveryActive',
                   'recoveryInactive',
                 ),
                 _buildBottomNavItem(
                   context,
-                  4,
+                  3,
                   'Profile',
                   'profileActive',
                   'profileInactive',
