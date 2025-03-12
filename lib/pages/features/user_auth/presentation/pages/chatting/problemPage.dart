@@ -70,6 +70,8 @@ class SelectionNotifier extends StateNotifier<Map<String, dynamic>> {
     return problemData['isVerifiedTerms'] ?? false;
   }
 
+  final isOutsideSoftwareProvider = StateProvider<bool>((ref) => false);
+
   Future<void> saveSelections(
       WidgetRef ref,
       BuildContext context,
@@ -107,6 +109,34 @@ class SelectionNotifier extends StateNotifier<Map<String, dynamic>> {
       state = {...state, "isLoading": false};
     }
   }
+
+  Future<void> saveSelectionsCreativity(
+    WidgetRef ref,
+    BuildContext context,
+    String problemId,
+  ) async {
+    try {
+      state = {...state, "isLoading": true};
+
+      final bool isGPTGenerated = await checkIfUsingGPT(problemId);
+      final generatedWords = await generateSectionWordsCreativity(problemId);
+
+      int generationType = isGPTGenerated ? 0 : 1;
+
+      await ref.read(problemProvider.notifier).addContainersToProblemCreativity(
+          problemId, generatedWords, generationType);
+
+      clearSelections();
+    } catch (e) {
+      showToast(
+        message: "Error in saveSelections: $e",
+        isError: true,
+      );
+      print("Error in saveSelections: $e");
+    } finally {
+      state = {...state, "isLoading": false};
+    }
+  }
 }
 
 final selectionProvider =
@@ -124,9 +154,33 @@ class ProblemPage extends ConsumerStatefulWidget {
 }
 
 class _ProblemPageState extends ConsumerState<ProblemPage> {
+  bool _isOutsideSoftware = false;
+
   @override
   void initState() {
     super.initState();
+  }
+
+  Future<void> _fetchIsOutsideSoftware() async {
+    try {
+      final firestore = FirebaseFirestore.instance;
+      final problemSnapshot =
+          await firestore.collection('problems').doc(widget.problemId).get();
+
+      if (problemSnapshot.exists) {
+        final data = problemSnapshot.data();
+        if (data != null) {
+          setState(() {
+            _isOutsideSoftware = data['isOutsideSoftware'] ?? false;
+          });
+          print("Updated isOutsideSoftware: $_isOutsideSoftware");
+        }
+      } else {
+        print("Problem document does not exist.");
+      }
+    } catch (e) {
+      print("Error fetching isOutsideSoftware: $e");
+    }
   }
 
   void _showAddContainerDialog(BuildContext context, WidgetRef ref) async {
@@ -489,7 +543,21 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
                     ),
                   ),
                   GestureDetector(
-                    onTap: () => specificationBottomSheet(context, ref),
+                    onTap: () async {
+                      await _fetchIsOutsideSoftware();
+
+                      if (_isOutsideSoftware) {
+                        ref
+                            .read(selectionProvider.notifier)
+                            .saveSelectionsCreativity(
+                              ref,
+                              context,
+                              widget.problemId,
+                            );
+                      } else {
+                        specificationBottomSheet(context, ref);
+                      }
+                    },
                     child: Center(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12.0),

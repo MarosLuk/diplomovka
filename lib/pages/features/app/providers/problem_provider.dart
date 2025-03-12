@@ -475,6 +475,57 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
     });
   }
 
+  Future<void> addContainersToProblemCreativity(
+      String problemId, List<String> generatedWords, int generationType) async {
+    final problemDocRef = _firestore.collection('problems').doc(problemId);
+
+    await _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(problemDocRef);
+      if (!snapshot.exists) {
+        throw Exception("Problem does not exist");
+      }
+
+      List<dynamic> containers = snapshot.get('containers') ?? [];
+
+      if (generatedWords.isEmpty) {
+        print("No words to add as containers!");
+        return;
+      }
+
+      String getGenerationLabel(int type) {
+        switch (type) {
+          case 0:
+            return "AI";
+          case 1:
+            return "Manual";
+          case 2:
+            return "User";
+          default:
+            return "Unknown";
+        }
+      }
+
+      String generatedBy = getGenerationLabel(generationType);
+
+      for (String word in generatedWords) {
+        String containerId = _firestore.collection('problems').doc().id;
+        final newContainer = {
+          'containerId': containerId,
+          'containerName': word.trim(),
+          'messages': [],
+          'generatedBy': generatedBy,
+        };
+
+        print("✅ Adding container: $newContainer");
+        containers.add(newContainer);
+      }
+
+      transaction.update(problemDocRef, {'containers': containers});
+    });
+
+    print("Firestore transaction completed! Containers added successfully.");
+  }
+
   void clearState() {
     state = [];
   }

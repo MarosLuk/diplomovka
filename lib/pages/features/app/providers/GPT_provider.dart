@@ -11,7 +11,8 @@ class OpenAIService {
     required int numberOfWords,
     required bool isSolutionDomain,
     required bool isSpilledHat,
-    String? problemDescription,
+    required bool isOutsideSoftware,
+    required String? problemDescription,
   }) async {
     final url = Uri.parse("https://api.openai.com/v1/chat/completions");
     final headers = {
@@ -25,19 +26,30 @@ class OpenAIService {
 
     final String domainType = isSolutionDomain ? "solution" : "application";
 
-    String systemMessage = "I want the response always in English. "
-        "Return exactly $numberOfWords phrases related to software development. "
-        "Use the domain: $domainType. "
-        "Options have to have 1-3 words max."
-        "Selected sections and options:\n$optionsText";
-
-    if (problemDescription != null && problemDescription.isNotEmpty) {
-      systemMessage += "\n\nProblem Description: $problemDescription";
-    }
-
-    if (isSpilledHat) {
+    String systemMessage = "I want the response always in English. ";
+    if (isOutsideSoftware) {
+      systemMessage += "Return exactly $numberOfWords phrases to description.";
+      systemMessage += "Options have to have 1-3 words max.";
+      if (problemDescription != null && problemDescription.isNotEmpty) {
+        systemMessage += "\n\nProblem Description: $problemDescription";
+      }
       systemMessage +=
-          "\n\n25% of options, have to be some random thing absolutely outside of software scope. Just option without note."; // ✅ Add Spilled Hat behavior
+          "Give me just content of option. No category , no numbering, no other words in return message.";
+    } else {
+      systemMessage +=
+          "Return exactly $numberOfWords phrases related to software development. "
+          "Use the domain: $domainType. "
+          "Options have to have 1-3 words max."
+          "Selected sections and options:\n$optionsText";
+
+      if (problemDescription != null && problemDescription.isNotEmpty) {
+        systemMessage += "\n\nProblem Description: $problemDescription";
+      }
+
+      if (isSpilledHat) {
+        systemMessage +=
+            "\n\n25% of options, have to be some random thing absolutely outside of software scope. Just option without note."; // ✅ Add Spilled Hat behavior
+      }
     }
 
     final messages = [

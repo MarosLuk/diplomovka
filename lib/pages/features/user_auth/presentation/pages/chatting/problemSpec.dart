@@ -27,6 +27,7 @@ Future<Map<String, List<String>>> generateSectionWords(
   final bool isUseContext = problemData['isUseContext'] ?? false;
   final bool isSpilledHat = problemData['isSpilledHat'] ?? false;
   final String? problemDescription = problemData['problemDescription'];
+  final bool isOutsideSoftware = problemData['isOutsideSoftware'] ?? false;
 
   print(
       "Firestore Settings: sliderValue=$totalWordsNeeded, isSolutionDomain=$isSolutionDomain, "
@@ -36,13 +37,13 @@ Future<Map<String, List<String>>> generateSectionWords(
 
   if (isVerifiedTerms) {
     result = await fetchWordsFromGPT(
-      selectedOptions,
-      totalWordsNeeded,
-      isSolutionDomain,
-      isUseContext,
-      isSpilledHat,
-      problemDescription,
-    );
+        selectedOptions,
+        totalWordsNeeded,
+        isSolutionDomain,
+        isUseContext,
+        isSpilledHat,
+        problemDescription,
+        isOutsideSoftware);
   } else {
     Map<String, dynamic> allOptionContent = {};
 
@@ -167,6 +168,48 @@ Future<Map<String, List<String>>> generateSectionWords(
   return result;
 }
 
+Future<List<String>> generateSectionWordsCreativity(String problemId) async {
+  final firestore = FirebaseFirestore.instance;
+  final problemSnapshot =
+      await firestore.collection('problems').doc(problemId).get();
+
+  if (!problemSnapshot.exists) {
+    throw Exception("Problem settings not found.");
+  }
+
+  final problemData = problemSnapshot.data() as Map<String, dynamic>;
+
+  final int totalWordsNeeded =
+      ((problemData['sliderValue'] ?? 5).toInt()).clamp(1, 10);
+
+  final bool isSolutionDomain = problemData['isSolutionDomain'] ?? false;
+  final bool isVerifiedTerms = problemData['isVerifiedTerms'] ?? false;
+  final bool isUseContext = problemData['isUseContext'] ?? false;
+  final bool isSpilledHat = problemData['isSpilledHat'] ?? false;
+  final String? problemDescription = problemData['problemDescription'];
+  final bool isOutsideSoftware = problemData['isOutsideSoftware'] ?? false;
+
+  print(
+      "Firestore Settings: sliderValue=$totalWordsNeeded, isSolutionDomain=$isSolutionDomain, "
+      "isVerifiedTerms=$isVerifiedTerms, isSpilledHat=$isSpilledHat, isUseContext=$isUseContext, problemDescription=$problemDescription");
+
+  List<String> words = [];
+
+  if (isVerifiedTerms) {
+    Map<String, List<String>> gptResponse = await fetchWordsFromGPT({},
+        totalWordsNeeded,
+        isSolutionDomain,
+        isUseContext,
+        isSpilledHat,
+        problemDescription,
+        isOutsideSoftware);
+
+    words = gptResponse.values.expand((wordList) => wordList).toList();
+  }
+
+  return words;
+}
+
 Future<Map<String, List<String>>> fetchWordsFromGPT(
   Map<String, List<String>> selectedOptions,
   int sliderValue,
@@ -174,6 +217,7 @@ Future<Map<String, List<String>>> fetchWordsFromGPT(
   bool isUseContext,
   bool isSpilledHat,
   String? problemDescription,
+  bool isOutsideSoftware,
 ) async {
   final OpenAIService openAIService = OpenAIService(APIkey_GPT);
 
@@ -183,15 +227,22 @@ Future<Map<String, List<String>>> fetchWordsFromGPT(
     isSolutionDomain: isSolutionDomain,
     isSpilledHat: isSpilledHat,
     problemDescription: isUseContext ? problemDescription : null,
+    isOutsideSoftware: isOutsideSoftware,
   );
 
-  print("🔹 GPT Response: $gptResponse");
+  print("GPT Response: $gptResponse");
 
   final List<String> words =
       gptResponse.split("\n").where((word) => word.isNotEmpty).toList();
 
   final Map<String, List<String>> sectionWords = {};
   final sectionKeys = selectedOptions.keys.toList();
+
+  if (sectionKeys.isEmpty) {
+    print("No sections provided, returning all words in a default category.");
+    sectionWords["Creativity"] = words; // Assign all words to "General"
+    return sectionWords;
+  }
 
   for (int i = 0; i < words.length; i++) {
     final section = sectionKeys[i % sectionKeys.length];

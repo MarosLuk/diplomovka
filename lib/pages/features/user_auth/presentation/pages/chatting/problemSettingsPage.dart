@@ -31,6 +31,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
   final ValueNotifier<bool> _isUseContext = ValueNotifier(false);
   final ValueNotifier<double> _sliderValue = ValueNotifier(5);
   final ValueNotifier<bool> _isSharedHat = ValueNotifier(false);
+  final ValueNotifier<bool> _isOutsideSoftware = ValueNotifier(false);
 
   @override
   void initState() {
@@ -65,6 +66,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
     _isUseContext.value = data['isUseContext'] ?? false;
     _sliderValue.value = (data['sliderValue'] ?? 1).toDouble();
     _isSharedHat.value = data['isSharedHat'] ?? false;
+    _isOutsideSoftware.value = data['isOutsideSoftware'] ?? false;
 
     return data;
   }
@@ -234,9 +236,23 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               _buildSwitch(
+                                label: "Outside of Software",
+                                valueNotifier: _isOutsideSoftware,
+                                firestoreField: 'isOutsideSoftware',
+                                onChanged: (bool newValue) {
+                                  _updateProblemFieldSettings(widget.problemId,
+                                      'isVerifiedTerms', true);
+                                  _updateProblemFieldSettings(
+                                      widget.problemId, 'isUseContext', true);
+                                  _isOutsideSoftware.value = newValue;
+                                  _isVerifiedTerms.value = true;
+                                },
+                              ),
+                              _buildSwitch(
                                 label: "Create content: verified terms / GPT",
                                 valueNotifier: _isVerifiedTerms,
                                 firestoreField: 'isVerifiedTerms',
+                                isEnabled: !_isOutsideSoftware.value,
                                 onChanged: (bool newValue) {
                                   _isVerifiedTerms.value = newValue;
 
@@ -248,19 +264,22 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                                 label: "Spilled / non-spilled hat",
                                 valueNotifier: _isSpilledHat,
                                 firestoreField: 'isSpilledHat',
-                                isEnabled: isGPTEnabled,
+                                isEnabled:
+                                    isGPTEnabled && !_isOutsideSoftware.value,
                                 onChanged: (bool newValue) {},
                               ),
                               _buildSwitch(
                                 label: "Use context",
                                 valueNotifier: _isUseContext,
                                 firestoreField: 'isUseContext',
-                                isEnabled: isGPTEnabled,
+                                isEnabled:
+                                    isGPTEnabled && !_isOutsideSoftware.value,
                                 onChanged: (bool newValue) {},
                               ),
                               _buildSwitch(
                                 label: "Application domain / Solution",
                                 valueNotifier: _isSolutionDomain,
+                                isEnabled: !_isOutsideSoftware.value,
                                 firestoreField: 'isSolutionDomain',
                                 onChanged: (bool newValue) {},
                               ),
@@ -585,6 +604,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
               onChanged: isEnabled
                   ? (bool newValue) async {
                       valueNotifier.value = newValue;
+                      setState(() {});
                       await _updateProblemFieldSettings(
                           widget.problemId, firestoreField, newValue);
                       onChanged(newValue);

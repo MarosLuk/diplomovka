@@ -33,18 +33,6 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    _checkRememberMe();
-  }
-
-  Future<void> _checkRememberMe() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    int rememberStatus = prefs.getInt('rememberMe') ?? 0;
-
-    if (rememberStatus == 1) {
-      Navigator.pushReplacementNamed(context, "/home");
-    } else if (rememberStatus == 2) {
-      Navigator.pushReplacementNamed(context, "/admin");
-    }
   }
 
   @override
