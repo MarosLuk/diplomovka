@@ -256,9 +256,8 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                           : Text('Save Changes'),
                     ),
                     const SizedBox(height: 20),
-                    _buildSection('Owned Problems', ownedProblems),
-                    _buildSection(
-                        'Collaborated Problems', collaboratedProblems),
+                    _buildSection('Owned Hats', ownedProblems),
+                    _buildSection('Collaborated Hats', collaboratedProblems),
                     _buildSection('Invites', invites),
                   ],
                 ),
@@ -407,7 +406,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                         ),
                       ),
                       subtitle: Text(
-                        'Problem ID: ${item['problemId']}',
+                        'Term ID: ${item['problemId']}',
                         style: AppStyles.labelSmall(
                           color: Theme.of(context).primaryColor,
                         ),

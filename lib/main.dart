@@ -101,7 +101,7 @@ class _MyAppState extends State<MyApp> {
                 const Spacer(),
                 const SizedBox(height: 24),
                 Text(
-                  'Your Helpie',
+                  'Your SoftHat',
                   style: AppStyles.headLineLarge(color: Colors.white)
                       .copyWith(fontSize: 32),
                 ),

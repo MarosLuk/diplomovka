@@ -98,7 +98,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          "HELPIE",
+          "SoftHat",
           style: AppStyles.headLineMedium(
             color: Theme.of(context).primaryColor,
           ),
@@ -216,7 +216,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 color: Theme.of(context).colorScheme.primary,
               ),
               title: Text(
-                'Problems',
+                'My Hats',
                 style: AppStyles.labelMedium(
                   color: Theme.of(context).colorScheme.primary,
                 ),

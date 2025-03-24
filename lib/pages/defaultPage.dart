@@ -84,7 +84,7 @@ class _DefaultPageState extends ConsumerState<DefaultPage> {
                 _buildBottomNavItem(
                   context,
                   2,
-                  'Inspiration',
+                  'Shared Hats',
                   'recoveryActive',
                   'recoveryInactive',
                 ),

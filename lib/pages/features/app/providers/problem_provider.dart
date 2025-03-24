@@ -322,7 +322,7 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
         return AlertDialog(
           backgroundColor: AppStyles.background(),
           title: Text(
-            'Enter problem details',
+            'Set up a new Hat',
             style: TextStyle(color: AppStyles.onBackground()),
           ),
           content: Column(
@@ -330,8 +330,8 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
             children: [
               TextField(
                 controller: problemNameController,
-                decoration: InputDecoration(
-                  hintText: "Problem name",
+                decoration: const InputDecoration(
+                  hintText: "Name",
                   hintStyle: TextStyle(color: Colors.grey),
                 ),
                 style: TextStyle(color: AppStyles.onBackground()),
@@ -340,8 +340,8 @@ class ProblemNotifier extends StateNotifier<List<ProblemModel>> {
               TextField(
                 controller: problemDescriptionController,
                 maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: "Problem description",
+                decoration: const InputDecoration(
+                  hintText: "Context description",
                   hintStyle: TextStyle(color: Colors.grey),
                 ),
                 style: TextStyle(color: AppStyles.onBackground()),

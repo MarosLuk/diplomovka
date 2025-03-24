@@ -95,7 +95,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Total Containers: $totalContainers",
+                    "Total Terms available: $totalContainers",
                     style: AppStyles.titleMedium(
                         color: Theme.of(context).primaryColor),
                   ),

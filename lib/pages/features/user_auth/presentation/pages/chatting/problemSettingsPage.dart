@@ -164,7 +164,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
       appBar: AppBar(
         scrolledUnderElevation: 0,
         title: Text(
-          'Problem Settings',
+          'Settings',
           style: AppStyles.headLineMedium(color: AppStyles.onBackground()),
         ),
       ),
@@ -224,7 +224,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        "Inspiration settings",
+                        "Generate the Hat content",
                         style: AppStyles.headLineSmall(
                             color: AppStyles.onBackground()),
                       ),
@@ -236,7 +236,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               _buildSwitch(
-                                label: "Outside of Software",
+                                label: "Terms unrelated to software",
                                 valueNotifier: _isOutsideSoftware,
                                 firestoreField: 'isOutsideSoftware',
                                 onChanged: (bool newValue) {
@@ -249,7 +249,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                                 },
                               ),
                               _buildSwitch(
-                                label: "Create content: verified terms / GPT",
+                                label: "Verified terms / GPT",
                                 valueNotifier: _isVerifiedTerms,
                                 firestoreField: 'isVerifiedTerms',
                                 isEnabled: !_isOutsideSoftware.value,
@@ -261,7 +261,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                                 },
                               ),
                               _buildSwitch(
-                                label: "Spilled / non-spilled hat",
+                                label: "Non-spilled / Spilled Hat",
                                 valueNotifier: _isSpilledHat,
                                 firestoreField: 'isSpilledHat',
                                 isEnabled:
@@ -269,7 +269,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                                 onChanged: (bool newValue) {},
                               ),
                               _buildSwitch(
-                                label: "Use context",
+                                label: "Use context description",
                                 valueNotifier: _isUseContext,
                                 firestoreField: 'isUseContext',
                                 isEnabled:
@@ -295,7 +295,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "How many words to pick from Hat (1-10): ${value.round()}",
+                                "How many terms to pick from Hat (1-10): ${value.round()}",
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold),
                               ),
@@ -319,26 +319,26 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        "Share Creative Hat",
+                        "Share the Hat",
                         style: AppStyles.headLineSmall(
                           color: AppStyles.onBackground(),
                         ),
                       ),
                       _buildSwitch(
-                        label: "Share Creative Hat",
+                        label: "Share the Hat",
                         valueNotifier: _isSharedHat,
                         firestoreField: 'isSharedHat',
                         onChanged: (bool newValue) {},
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        "Problem Details",
+                        "Hat Details",
                         style: AppStyles.headLineSmall(
                             color: AppStyles.onBackground()),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        "Name:",
+                        "Name",
                         style: AppStyles.titleSmall(
                             color: AppStyles.onBackground()),
                       ),
@@ -349,7 +349,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                                 ? TextField(
                                     controller: _nameController,
                                     decoration: InputDecoration(
-                                      labelText: 'Problem Name',
+                                      labelText: 'Hat Name',
                                       border: OutlineInputBorder(),
                                     ),
                                   )
@@ -379,7 +379,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        "Description:",
+                        "Context Description",
                         style: AppStyles.titleSmall(
                             color: AppStyles.onBackground()),
                       ),
@@ -390,7 +390,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                                 ? TextField(
                                     controller: _descriptionController,
                                     decoration: InputDecoration(
-                                      labelText: 'Problem Description',
+                                      labelText: 'Hat Context Description',
                                       border: OutlineInputBorder(),
                                     ),
                                   )
@@ -425,7 +425,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        "Created At:",
+                        "Created",
                         style: AppStyles.titleSmall(
                             color: AppStyles.onBackground()),
                       ),
@@ -469,7 +469,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                           )),
                       const SizedBox(height: 12),
                       Text(
-                        "Containers:",
+                        "Terms:",
                         style: AppStyles.headLineSmall(
                             color: AppStyles.onBackground()),
                       ),
