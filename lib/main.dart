@@ -53,6 +53,9 @@ class _MyAppState extends State<MyApp> {
       }
 
       final prefs = await SharedPreferences.getInstance();
+      if (prefs.get('rememberMe') is! int) {
+        await prefs.remove('rememberMe');
+      }
       final int rememberMeStatus = prefs.getInt('rememberMe') ??
           0; // 0 = No user, 1 = Regular, 2 = Admin
 
