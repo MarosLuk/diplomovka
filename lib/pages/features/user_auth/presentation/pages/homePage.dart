@@ -115,36 +115,6 @@ class _HomePageState extends ConsumerState<HomePage> {
             },
           ),
         ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.add_circle_outline,
-              color: Theme.of(context).primaryColor,
-            ),
-            onPressed: () async {
-              final problemDetails = await ref
-                  .read(problemProvider.notifier)
-                  .promptForProblemDetails(context);
-
-              if (problemDetails != null &&
-                  problemDetails['name']!.isNotEmpty &&
-                  problemDetails['description']!.isNotEmpty &&
-                  user != null) {
-                String problemId = await ref
-                    .read(problemProvider.notifier)
-                    .createNewProblem(problemDetails['name']!,
-                        problemDetails['description']!, user!.uid);
-
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ProblemPage(problemId: problemId),
-                  ),
-                );
-              }
-            },
-          ),
-        ],
       ),
       drawer: Drawer(
         backgroundColor: const Color.fromRGBO(26, 48, 121, 1.0),
@@ -303,7 +273,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 );
               }).toList(),
             ),
-            ListTile(
+            /*ListTile(
               leading: Icon(Icons.settings,
                   color: Theme.of(context).colorScheme.primary),
               title: Text(
@@ -312,7 +282,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     color: Theme.of(context).colorScheme.primary),
               ),
               onTap: () {},
-            ),
+            ),*/
             ListTile(
               leading: Icon(Icons.exit_to_app,
                   color: Theme.of(context).colorScheme.primary),
@@ -363,10 +333,59 @@ class _HomePageState extends ConsumerState<HomePage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                "Welcome",
-                style: AppStyles.headLineLarge(
-                    color: Theme.of(context).primaryColor),
+              GestureDetector(
+                onTap: () async {
+                  final problemDetails = await ref
+                      .read(problemProvider.notifier)
+                      .promptForProblemDetails(context);
+
+                  if (problemDetails != null &&
+                      problemDetails['name']!.isNotEmpty &&
+                      problemDetails['description']!.isNotEmpty &&
+                      user != null) {
+                    String problemId = await ref
+                        .read(problemProvider.notifier)
+                        .createNewProblem(problemDetails['name']!,
+                            problemDetails['description']!, user!.uid);
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ProblemPage(problemId: problemId),
+                      ),
+                    );
+                  }
+                },
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white,
+                          width: 2,
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "Create New Hat",
+                              style: AppStyles.headLineSmall(
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(height: 30),
             ],

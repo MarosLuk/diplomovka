@@ -325,7 +325,7 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
                                   ? CircularProgressIndicator(
                                       color: Colors.black)
                                   : Text(
-                                      "Save",
+                                      "Confirm",
                                       style: AppStyles.headLineSmall(
                                           color: Colors.black),
                                     ),
@@ -577,7 +577,7 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
                                 ),
                                 SizedBox(width: 4),
                                 Text(
-                                  "Inspiration",
+                                  "Pick from Hat",
                                   style: AppStyles.headLineSmall(
                                     color: Colors.white,
                                   ),

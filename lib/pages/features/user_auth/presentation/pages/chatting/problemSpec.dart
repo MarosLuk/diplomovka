@@ -23,6 +23,7 @@ Future<Map<String, List<String>>> generateSectionWords(
   final problemData = problemSnapshot.data() as Map<String, dynamic>;
   final int totalWordsNeeded = (problemData['sliderValue'] ?? 5).toInt();
   final bool isSolutionDomain = problemData['isSolutionDomain'] ?? false;
+  final bool isApplicationDomain = problemData['isApplicationDomain'] ?? false;
   final bool isVerifiedTerms = problemData['isVerifiedTerms'] ?? false;
   final bool isUseContext = problemData['isUseContext'] ?? false;
   final bool isSpilledHat = problemData['isSpilledHat'] ?? false;
@@ -30,7 +31,7 @@ Future<Map<String, List<String>>> generateSectionWords(
   final bool isOutsideSoftware = problemData['isOutsideSoftware'] ?? false;
 
   print(
-      "Firestore Settings: sliderValue=$totalWordsNeeded, isSolutionDomain=$isSolutionDomain, "
+      "Firestore Settings: sliderValue=$totalWordsNeeded, isSolutionDomain=$isSolutionDomain, isApplicationDomain=$isApplicationDomain,"
       "isVerifiedTerms=$isVerifiedTerms, isSpilledHat=$isSpilledHat, isUseContext=$isUseContext, problemDescription=$problemDescription");
 
   Map<String, List<String>> result = {};
@@ -40,6 +41,7 @@ Future<Map<String, List<String>>> generateSectionWords(
         selectedOptions,
         totalWordsNeeded,
         isSolutionDomain,
+        isApplicationDomain,
         isUseContext,
         isSpilledHat,
         problemDescription,
@@ -100,7 +102,9 @@ Future<Map<String, List<String>>> generateSectionWords(
 
           final bool matchesDomain =
               (isSolutionDomain && domainType == 'solution') ||
-                  (!isSolutionDomain && domainType == 'application');
+                  (isApplicationDomain && domainType == 'application') ||
+                  (!isSolutionDomain && !isApplicationDomain) ||
+                  (isSolutionDomain && isApplicationDomain);
 
           if (matchesDomain) {
             final int up = wordMap['upvotes'] ?? 0;
@@ -183,6 +187,7 @@ Future<List<String>> generateSectionWordsCreativity(String problemId) async {
       ((problemData['sliderValue'] ?? 5).toInt()).clamp(1, 10);
 
   final bool isSolutionDomain = problemData['isSolutionDomain'] ?? false;
+  final bool isApplicationDomain = problemData['isApplicationDomain'] ?? false;
   final bool isVerifiedTerms = problemData['isVerifiedTerms'] ?? false;
   final bool isUseContext = problemData['isUseContext'] ?? false;
   final bool isSpilledHat = problemData['isSpilledHat'] ?? false;
@@ -190,7 +195,7 @@ Future<List<String>> generateSectionWordsCreativity(String problemId) async {
   final bool isOutsideSoftware = problemData['isOutsideSoftware'] ?? false;
 
   print(
-      "Firestore Settings: sliderValue=$totalWordsNeeded, isSolutionDomain=$isSolutionDomain, "
+      "Firestore Settings: sliderValue=$totalWordsNeeded, isSolutionDomain=$isSolutionDomain, isApplicationDomain=$isApplicationDomain,"
       "isVerifiedTerms=$isVerifiedTerms, isSpilledHat=$isSpilledHat, isUseContext=$isUseContext, problemDescription=$problemDescription");
 
   List<String> words = [];
@@ -199,6 +204,7 @@ Future<List<String>> generateSectionWordsCreativity(String problemId) async {
     Map<String, List<String>> gptResponse = await fetchWordsFromGPT({},
         totalWordsNeeded,
         isSolutionDomain,
+        isApplicationDomain,
         isUseContext,
         isSpilledHat,
         problemDescription,
@@ -214,6 +220,7 @@ Future<Map<String, List<String>>> fetchWordsFromGPT(
   Map<String, List<String>> selectedOptions,
   int sliderValue,
   bool isSolutionDomain,
+  bool isApplicationDomain,
   bool isUseContext,
   bool isSpilledHat,
   String? problemDescription,

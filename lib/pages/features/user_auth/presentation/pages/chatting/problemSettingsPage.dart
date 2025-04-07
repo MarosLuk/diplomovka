@@ -28,6 +28,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
   final ValueNotifier<bool> _isVerifiedTerms = ValueNotifier(false);
   final ValueNotifier<bool> _isSpilledHat = ValueNotifier(false);
   final ValueNotifier<bool> _isSolutionDomain = ValueNotifier(false);
+  final ValueNotifier<bool> _isApplicationDomain = ValueNotifier(false);
   final ValueNotifier<bool> _isUseContext = ValueNotifier(false);
   final ValueNotifier<double> _sliderValue = ValueNotifier(5);
   final ValueNotifier<bool> _isSharedHat = ValueNotifier(false);
@@ -63,6 +64,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
     _isVerifiedTerms.value = data['isVerifiedTerms'] ?? false;
     _isSpilledHat.value = data['isSpilledHat'] ?? false;
     _isSolutionDomain.value = data['isSolutionDomain'] ?? false;
+    _isApplicationDomain.value = data['isApplicationDomain'] ?? false;
     _isUseContext.value = data['isUseContext'] ?? false;
     _sliderValue.value = (data['sliderValue'] ?? 1).toDouble();
     _isSharedHat.value = data['isSharedHat'] ?? false;
@@ -236,7 +238,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               _buildSwitch(
-                                label: "Terms unrelated to software",
+                                label: "Allow for any terms",
                                 valueNotifier: _isOutsideSoftware,
                                 firestoreField: 'isOutsideSoftware',
                                 onChanged: (bool newValue) {
@@ -277,11 +279,24 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                                 onChanged: (bool newValue) {},
                               ),
                               _buildSwitch(
-                                label: "Application domain / Solution",
+                                label: "Application Domain",
+                                valueNotifier: _isApplicationDomain,
+                                isEnabled: !_isOutsideSoftware.value,
+                                firestoreField: 'isApplicationDomain',
+                                onChanged: (bool newValue) {
+                                  _updateProblemFieldSettings(widget.problemId,
+                                      'isApplicationDomain', newValue);
+                                },
+                              ),
+                              _buildSwitch(
+                                label: "Solution Domain",
                                 valueNotifier: _isSolutionDomain,
                                 isEnabled: !_isOutsideSoftware.value,
                                 firestoreField: 'isSolutionDomain',
-                                onChanged: (bool newValue) {},
+                                onChanged: (bool newValue) {
+                                  _updateProblemFieldSettings(widget.problemId,
+                                      'isSolutionDomain', newValue);
+                                },
                               ),
                             ],
                           );
