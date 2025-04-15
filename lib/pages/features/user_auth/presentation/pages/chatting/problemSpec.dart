@@ -232,6 +232,7 @@ Future<Map<String, List<String>>> fetchWordsFromGPT(
     selectedOptionsGroupedBySections: selectedOptions,
     numberOfWords: sliderValue,
     isSolutionDomain: isSolutionDomain,
+    isApplicationDomain: isApplicationDomain,
     isSpilledHat: isSpilledHat,
     problemDescription: isUseContext ? problemDescription : null,
     isOutsideSoftware: isOutsideSoftware,
@@ -494,102 +495,147 @@ void showVoteDialog(BuildContext context, List<String> subsections,
   );
 }
 
-void regenerateContainer(BuildContext context, String problemId,
-    String containerId, String containerName, WidgetRef ref) async {
+void regenerateContainer(
+    BuildContext context,
+    String problemId,
+    String containerId,
+    String containerName,
+    String generetedBy,
+    WidgetRef ref) async {
+  final OpenAIService openAIService = OpenAIService(APIkey_GPT);
   try {
     final parts = containerName.split(": ");
-    if (parts.length != 2) {
-      throw Exception("Invalid container name format: $containerName");
-    }
+    if (parts.length != 2 || generetedBy == "AI") {
+      final newWord = await openAIService.getChatGPTNewWord(
+          problemId: problemId,
+          containerId: containerId,
+          containerName: containerName);
 
-    final section = parts[0].trim();
-    final previousOption = parts[1].trim();
+      final firestore = FirebaseFirestore.instance;
+      final problemRef = firestore.collection('problems').doc(problemId);
+      final snapshot = await problemRef.get();
 
-    final firestore = FirebaseFirestore.instance;
-    final problemRef = firestore.collection('problems').doc(problemId);
-    final snapshot = await problemRef.get();
+      if (!snapshot.exists) {
+        throw Exception("Problem not found: $problemId");
+      }
 
-    if (!snapshot.exists) {
-      throw Exception("Problem not found: $problemId");
-    }
+      final problemData = snapshot.data();
+      if (problemData == null || !problemData.containsKey('containers')) {
+        throw Exception("Invalid problem data format.");
+      }
 
-    final problemData = snapshot.data();
-    if (problemData == null || !problemData.containsKey('containers')) {
-      throw Exception("Invalid problem data format.");
-    }
+      final containersRaw = problemData['containers'];
+      if (containersRaw is! List ||
+          containersRaw.isEmpty ||
+          containersRaw[0] is! Map<String, dynamic>) {
+        throw Exception("Invalid format for containers in problem data.");
+      }
+      final containers = List<Map<String, dynamic>>.from(containersRaw);
 
-    final containersRaw = problemData['containers'];
-    if (containersRaw is! List ||
-        containersRaw.isEmpty ||
-        containersRaw[0] is! Map<String, dynamic>) {
-      throw Exception("Invalid format for containers in problem data.");
-    }
-    final containers = List<Map<String, dynamic>>.from(containersRaw);
+      final containerIndex =
+          containers.indexWhere((c) => c['containerId'] == containerId);
+      if (containerIndex == -1) {
+        throw Exception("Container not found: $containerId");
+      }
 
-    final containerIndex =
-        containers.indexWhere((c) => c['containerId'] == containerId);
-    if (containerIndex == -1) {
-      throw Exception("Container not found: $containerId");
-    }
+      containers[containerIndex]['containerName'] = newWord;
 
-    final optionContentSnapshot = await firestore
-        .collection('problemSpecifications')
-        .doc('optionContent')
-        .get();
+      await problemRef.update({'containers': containers});
 
-    final optionContent =
-        optionContentSnapshot.data()?['optionContent'] as Map<String, dynamic>?;
-    if (optionContent == null) {
-      throw Exception("OptionContent not found in Firestore.");
-    }
+      showToast(
+          message: "Container name regenerated successfully!", isError: false);
+    } else {
+      final section = parts[0].trim();
+      final previousOption = parts[1].trim();
 
-    // Get all already used options in containers
-    final usedOptions = containers
-        .map((c) => c['containerName'].toString().split(": ").last.trim())
-        .toSet();
+      final firestore = FirebaseFirestore.instance;
+      final problemRef = firestore.collection('problems').doc(problemId);
+      final snapshot = await problemRef.get();
 
-    final subsections = sectionToSubsections[section];
-    if (subsections == null) {
-      throw Exception("Section '$section' not found in sectionToSubsections.");
-    }
+      if (!snapshot.exists) {
+        throw Exception("Problem not found: $problemId");
+      }
 
-    String? newWord;
-    for (final subsection in subsections) {
-      if (!optionContent.containsKey(subsection)) continue;
+      final problemData = snapshot.data();
+      if (problemData == null || !problemData.containsKey('containers')) {
+        throw Exception("Invalid problem data format.");
+      }
 
-      final optionsRaw = optionContent[subsection];
-      if (optionsRaw is! List ||
-          optionsRaw.isEmpty ||
-          optionsRaw[0] is! Map<String, dynamic>) {
+      final containersRaw = problemData['containers'];
+      if (containersRaw is! List ||
+          containersRaw.isEmpty ||
+          containersRaw[0] is! Map<String, dynamic>) {
+        throw Exception("Invalid format for containers in problem data.");
+      }
+      final containers = List<Map<String, dynamic>>.from(containersRaw);
+
+      final containerIndex =
+          containers.indexWhere((c) => c['containerId'] == containerId);
+      if (containerIndex == -1) {
+        throw Exception("Container not found: $containerId");
+      }
+
+      final optionContentSnapshot = await firestore
+          .collection('problemSpecifications')
+          .doc('optionContent')
+          .get();
+
+      final optionContent = optionContentSnapshot.data()?['optionContent']
+          as Map<String, dynamic>?;
+      if (optionContent == null) {
+        throw Exception("OptionContent not found in Firestore.");
+      }
+
+      // Get all already used options in containers
+      final usedOptions = containers
+          .map((c) => c['containerName'].toString().split(": ").last.trim())
+          .toSet();
+
+      final subsections = sectionToSubsections[section];
+      if (subsections == null) {
         throw Exception(
-            "Invalid format for options in subsection: $subsection");
+            "Section '$section' not found in sectionToSubsections.");
       }
 
-      final optionsList = List<Map<String, dynamic>>.from(optionsRaw);
+      String? newWord;
+      for (final subsection in subsections) {
+        if (!optionContent.containsKey(subsection)) continue;
 
-      // Filter options to exclude already used ones and the previous option
-      final availableOptions = optionsList
-          .map((o) => o['option'] as String)
-          .where((o) => o != previousOption && !usedOptions.contains(o))
-          .toList();
+        final optionsRaw = optionContent[subsection];
+        if (optionsRaw is! List ||
+            optionsRaw.isEmpty ||
+            optionsRaw[0] is! Map<String, dynamic>) {
+          throw Exception(
+              "Invalid format for options in subsection: $subsection");
+        }
 
-      if (availableOptions.isNotEmpty) {
-        final random = availableOptions..shuffle();
-        newWord = random.first;
-        break;
+        final optionsList = List<Map<String, dynamic>>.from(optionsRaw);
+
+        // Filter options to exclude already used ones and the previous option
+        final availableOptions = optionsList
+            .map((o) => o['option'] as String)
+            .where((o) => o != previousOption && !usedOptions.contains(o))
+            .toList();
+
+        if (availableOptions.isNotEmpty) {
+          final random = availableOptions..shuffle();
+          newWord = random.first;
+          break;
+        }
       }
+
+      if (newWord == null) {
+        throw Exception(
+            "No new word could be generated for section '$section'.");
+      }
+
+      containers[containerIndex]['containerName'] = "$section: $newWord";
+
+      await problemRef.update({'containers': containers});
+
+      showToast(
+          message: "Container name regenerated successfully!", isError: false);
     }
-
-    if (newWord == null) {
-      throw Exception("No new word could be generated for section '$section'.");
-    }
-
-    containers[containerIndex]['containerName'] = "$section: $newWord";
-
-    await problemRef.update({'containers': containers});
-
-    showToast(
-        message: "Container name regenerated successfully!", isError: false);
   } catch (e) {
     print("Error regenerating container: $e");
     showToast(message: "Failed to regenerate container: $e", isError: true);

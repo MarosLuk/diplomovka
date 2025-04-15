@@ -653,11 +653,12 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
                   widget.problemId,
                   container.containerId,
                   container.containerName,
+                  container.generatedBy,
                   ref,
                 );
               },
             ),
-          if (!isManualGenerated)
+          if (!isManualGenerated && container.generatedBy != "AI")
             IconButton(
               icon: Icon(Icons.info_outline, color: AppStyles.Primary50()),
               onPressed: () {

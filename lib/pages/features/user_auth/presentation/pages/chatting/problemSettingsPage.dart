@@ -248,6 +248,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                                       widget.problemId, 'isUseContext', true);
                                   _isOutsideSoftware.value = newValue;
                                   _isVerifiedTerms.value = true;
+                                  _isUseContext.value = true;
                                 },
                               ),
                               _buildSwitch(
@@ -260,10 +261,18 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
 
                                   _updateProblemFieldSettings(widget.problemId,
                                       'isVerifiedTerms', newValue);
+                                  if (newValue == false) {
+                                    _updateProblemFieldSettings(
+                                        widget.problemId,
+                                        'isApplicationDomain',
+                                        false);
+
+                                    _isApplicationDomain.value = false;
+                                  }
                                 },
                               ),
                               _buildSwitch(
-                                label: "Non-spilled / Spilled Hat",
+                                label: "Include random Inspiration",
                                 valueNotifier: _isSpilledHat,
                                 firestoreField: 'isSpilledHat',
                                 isEnabled:
@@ -286,6 +295,20 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                                 onChanged: (bool newValue) {
                                   _updateProblemFieldSettings(widget.problemId,
                                       'isApplicationDomain', newValue);
+                                  if (newValue == true) {
+                                    _updateProblemFieldSettings(
+                                        widget.problemId,
+                                        'isApplicationDomain',
+                                        true);
+                                    _updateProblemFieldSettings(
+                                        widget.problemId,
+                                        'isVerifiedTerms',
+                                        true);
+                                    _updateProblemFieldSettings(
+                                        widget.problemId, 'isUseContext', true);
+                                    _isVerifiedTerms.value = true;
+                                    _isUseContext.value = true;
+                                  }
                                 },
                               ),
                               _buildSwitch(
