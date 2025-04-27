@@ -252,7 +252,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                                 },
                               ),
                               _buildSwitch(
-                                label: "Verified terms / GPT",
+                                label: "Use GPT",
                                 valueNotifier: _isVerifiedTerms,
                                 firestoreField: 'isVerifiedTerms',
                                 isEnabled: !_isOutsideSoftware.value,
@@ -272,7 +272,7 @@ class _SettingsProblemPageState extends ConsumerState<SettingsProblemPage> {
                                 },
                               ),
                               _buildSwitch(
-                                label: "Include random Inspiration",
+                                label: "Include one completely random term",
                                 valueNotifier: _isSpilledHat,
                                 firestoreField: 'isSpilledHat',
                                 isEnabled:
