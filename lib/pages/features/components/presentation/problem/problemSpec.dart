@@ -62,10 +62,9 @@ Future<Map<String, List<String>>> generateSectionWords(
   final allOptionContent = rawData['optionContent'] as Map<String, dynamic>;
 
   final Random random = Random();
-  // single shared set to avoid duplicates across ALL sections
+
   final Set<String> usedWords = {};
 
-  // helper to pick up to `count` unique words from a bucket
   List<String> pickRandomWords(
     List<Map<String, dynamic>> source,
     int count,
@@ -83,7 +82,6 @@ Future<Map<String, List<String>>> generateSectionWords(
     return picked;
   }
 
-  // Distribute totalWordsNeeded *once* across all sections:
   final int sectionCount = sectionsData.length;
   final int basePerSection = totalWordsNeeded ~/ sectionCount;
   int remainder = totalWordsNeeded % sectionCount;
@@ -96,12 +94,10 @@ Future<Map<String, List<String>>> generateSectionWords(
       selectedOptions[title] ?? <String>[],
     );
 
-    // bucket lists for this section
     final List<Map<String, dynamic>> most = [];
     final List<Map<String, dynamic>> middle = [];
     final List<Map<String, dynamic>> uncommon = [];
 
-    // classify all optionContent entries by score
     for (final key in options) {
       final rawList = allOptionContent[key];
       if (rawList is! List) continue;
@@ -127,12 +123,11 @@ Future<Map<String, List<String>>> generateSectionWords(
       }
     }
 
-    // compute how many for this section
     int needed = basePerSection + (remainder > 0 ? 1 : 0);
     if (remainder > 0) remainder--;
 
     final List<String> words = [];
-    // half from "most", half of remaining from "middle", rest from "uncommon"
+
     final pickMost = pickRandomWords(most, needed ~/ 2);
     words.addAll(pickMost);
     needed -= pickMost.length;
@@ -145,7 +140,6 @@ Future<Map<String, List<String>>> generateSectionWords(
     words.addAll(pickUncommon);
     needed -= pickUncommon.length;
 
-    // pad with empties if needed, then filter out
     while (words.length < (basePerSection + (remainder >= 0 ? 0 : 0))) {
       words.add("");
     }
