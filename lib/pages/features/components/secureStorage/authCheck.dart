@@ -1,5 +1,5 @@
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
-import 'package:diplomovka/pages/features/user_auth/secureStorage/secureStorageService.dart';
+import 'package:diplomovka/pages/features/components/secureStorage/secureStorageService.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';

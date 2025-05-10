@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:diplomovka/pages/features/user_auth/firebase_auth_implementation/firebase_auth_services.dart';
+import 'package:diplomovka/pages/features/components/firebase_auth_implementation/firebase_auth_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:diplomovka/pages/features/app/global/toast.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
-import 'package:diplomovka/pages/features/user_auth/secureStorage/secureStorageService.dart';
+import 'package:diplomovka/pages/features/components/secureStorage/secureStorageService.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});

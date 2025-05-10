@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
-import 'package:diplomovka/pages/features/user_auth/presentation/pages/admin/userDetailPage.dart';
+import 'package:diplomovka/pages/features/components/presentation/pages/admin/userDetailPage.dart';
 import 'dart:async';
 
 class AdminSearchPage extends StatefulWidget {

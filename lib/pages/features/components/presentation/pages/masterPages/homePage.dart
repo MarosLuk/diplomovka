@@ -3,17 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:diplomovka/pages/features/app/global/toast.dart';
-import 'package:diplomovka/pages/features/user_auth/presentation/pages/profile_page.dart';
+import 'package:diplomovka/pages/features/components/presentation/pages/masterPages/profile_page.dart';
 import 'package:diplomovka/pages/features/app/providers/user_provider.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
-import 'package:diplomovka/pages/features/user_auth/presentation/pages/chatting/chat.dart';
+import 'package:diplomovka/pages/features/components/presentation/pages/chatting/chat.dart';
 import 'package:diplomovka/pages/features/app/providers/chat_provider.dart';
 import 'package:diplomovka/pages/features/app/providers/invitation_provider.dart';
 import 'dart:async';
 import 'package:diplomovka/pages/features/app/providers/hat_provider.dart';
-import 'package:diplomovka/pages/features/user_auth/presentation/pages/chatting/problemPage.dart';
+import 'package:diplomovka/pages/features/components/presentation/problem/problemPage.dart';
 import 'package:diplomovka/pages/features/app/providers/hat_provider.dart';
-import 'package:diplomovka/pages/features/user_auth/presentation/pages/GPT_Page.dart';
+import 'package:diplomovka/pages/features/components/presentation/pages/gpt/GPT_Page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends ConsumerStatefulWidget {

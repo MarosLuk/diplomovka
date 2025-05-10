@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
 import 'package:diplomovka/pages/features/app/global/toast.dart';
 import 'package:diplomovka/pages/features/app/providers/GPT_provider.dart';
-import 'package:diplomovka/pages/features/user_auth/API_keys/GPT_key.dart';
+import 'package:diplomovka/pages/features/components/API_keys/GPT_key.dart';
 
 Future<Map<String, List<String>>> generateSectionWords(
   List<Map<String, dynamic>> sectionsData,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:diplomovka/pages/features/app/providers/GPT_provider.dart';
-import 'package:diplomovka/pages/features/user_auth/API_keys/GPT_key.dart';
+import 'package:diplomovka/pages/features/components/API_keys/GPT_key.dart';
 /*
 class GPTPage extends StatefulWidget {
   const GPTPage({Key? key}) : super(key: key);

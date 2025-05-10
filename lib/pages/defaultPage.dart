@@ -1,7 +1,7 @@
-import 'package:diplomovka/pages/features/user_auth/presentation/pages/homePage.dart';
-import 'package:diplomovka/pages/features/user_auth/presentation/pages/inspirationPage.dart';
-import 'package:diplomovka/pages/features/user_auth/presentation/pages/myProblemsPage.dart';
-import 'package:diplomovka/pages/features/user_auth/presentation/pages/profile_page.dart';
+import 'package:diplomovka/pages/features/components/presentation/pages/masterPages/homePage.dart';
+import 'package:diplomovka/pages/features/components/presentation/pages/masterPages/inspirationPage.dart';
+import 'package:diplomovka/pages/features/components/presentation/pages/masterPages/myHatsPage.dart';
+import 'package:diplomovka/pages/features/components/presentation/pages/masterPages/profile_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';

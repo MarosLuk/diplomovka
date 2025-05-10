@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
 
-import '../../../app/global/toast.dart';
-import 'inspirationFoundedPage.dart';
+import '../../../../app/global/toast.dart';
+import '../inspiration/inspirationFoundedPage.dart';
 
 class InspirationPage extends ConsumerStatefulWidget {
   const InspirationPage({Key? key}) : super(key: key);

@@ -1,5 +1,5 @@
 // firebase_auth_services.dart
-import 'package:diplomovka/pages/features/user_auth/secureStorage/secureStorageService.dart';
+import 'package:diplomovka/pages/features/components/secureStorage/secureStorageService.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:diplomovka/pages/features/app/global/toast.dart';
 
