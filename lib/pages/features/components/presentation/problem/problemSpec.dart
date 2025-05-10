@@ -30,143 +30,127 @@ Future<Map<String, List<String>>> generateSectionWords(
   final String? problemDescription = problemData['problemDescription'];
   final bool isOutsideSoftware = problemData['isOutsideSoftware'] ?? false;
 
-  print(
-      "Firestore Settings: sliderValue=$totalWordsNeeded, isSolutionDomain=$isSolutionDomain, isApplicationDomain=$isApplicationDomain,"
-      "isVerifiedTerms=$isVerifiedTerms, isSpilledHat=$isSpilledHat, isUseContext=$isUseContext, problemDescription=$problemDescription");
-
-  Map<String, List<String>> result = {};
+  print("Firestore Settings: sliderValue=$totalWordsNeeded, "
+      "isSolutionDomain=$isSolutionDomain, isApplicationDomain=$isApplicationDomain, "
+      "isVerifiedTerms=$isVerifiedTerms, isSpilledHat=$isSpilledHat, "
+      "isUseContext=$isUseContext, problemDescription=$problemDescription");
 
   if (isVerifiedTerms) {
-    result = await fetchWordsFromGPT(
-        selectedOptions,
-        totalWordsNeeded,
-        isSolutionDomain,
-        isApplicationDomain,
-        isUseContext,
-        isSpilledHat,
-        problemDescription,
-        isOutsideSoftware);
-  } else {
-    Map<String, dynamic> allOptionContent = {};
+    return await fetchWordsFromGPT(
+      selectedOptions,
+      totalWordsNeeded,
+      isSolutionDomain,
+      isApplicationDomain,
+      isUseContext,
+      isSpilledHat,
+      problemDescription,
+      isOutsideSoftware,
+    );
+  }
 
-    final optionContentDoc = await firestore
-        .collection('problemSpecifications')
-        .doc('optionContent')
-        .get();
+  final optionContentDoc = await firestore
+      .collection('problemSpecifications')
+      .doc('optionContent')
+      .get();
+  if (!optionContentDoc.exists) {
+    throw Exception("optionContent document does not exist in Firestore!");
+  }
+  final rawData = optionContentDoc.data();
+  if (rawData == null || !rawData.containsKey('optionContent')) {
+    throw Exception("'optionContent' field is missing or null in Firestore!");
+  }
+  final allOptionContent = rawData['optionContent'] as Map<String, dynamic>;
 
-    if (!optionContentDoc.exists) {
-      throw Exception("optionContent document does not exist in Firestore!");
+  final Random random = Random();
+  // single shared set to avoid duplicates across ALL sections
+  final Set<String> usedWords = {};
+
+  // helper to pick up to `count` unique words from a bucket
+  List<String> pickRandomWords(
+    List<Map<String, dynamic>> source,
+    int count,
+  ) {
+    final picked = <String>[];
+    final temp = List<Map<String, dynamic>>.from(source);
+    while (count > 0 && temp.isNotEmpty) {
+      final idx = random.nextInt(temp.length);
+      final word = temp.removeAt(idx)['option'] as String;
+      if (usedWords.add(word)) {
+        picked.add(word);
+        count--;
+      }
     }
+    return picked;
+  }
 
-    final data = optionContentDoc.data();
-    if (data == null || !data.containsKey('optionContent')) {
-      throw Exception("'optionContent' field is missing or null in Firestore!");
-    }
+  // Distribute totalWordsNeeded *once* across all sections:
+  final int sectionCount = sectionsData.length;
+  final int basePerSection = totalWordsNeeded ~/ sectionCount;
+  int remainder = totalWordsNeeded % sectionCount;
 
-    allOptionContent = data['optionContent'] as Map<String, dynamic>;
+  final Map<String, List<String>> result = {};
 
-    final Random random = Random();
+  for (final section in sectionsData) {
+    final String title = section['title'] as String;
+    final List<String> options = List<String>.from(
+      selectedOptions[title] ?? <String>[],
+    );
 
-    for (final section in sectionsData) {
-      final sectionTitle = section["title"];
-      final List<String> options = selectedOptions[sectionTitle] ?? [];
-      final List<String> sectionWords = [];
+    // bucket lists for this section
+    final List<Map<String, dynamic>> most = [];
+    final List<Map<String, dynamic>> middle = [];
+    final List<Map<String, dynamic>> uncommon = [];
 
-      final List<Map<String, dynamic>> mostRelatable = [];
-      final List<Map<String, dynamic>> middleRelatable = [];
-      final List<Map<String, dynamic>> uncommon = [];
-
-      for (final optionKey in options) {
-        if (!allOptionContent.containsKey(optionKey)) {
-          print("No optionContent found for: $optionKey");
-          continue;
-        }
-        final rawList = allOptionContent[optionKey];
-        if (rawList is! List) {
-          print("'$optionKey' is not a List in Firestore!");
-          continue;
-        }
-
-        final optionMaps = rawList
-            .where((item) => item is Map<String, dynamic>)
-            .map((item) => item as Map<String, dynamic>)
-            .toList();
-
-        for (final wordMap in optionMaps) {
-          final String? domainType = wordMap['domainType'];
-          final String? wordText = wordMap['option'];
-
-          if (wordText == null || domainType == null) {
-            continue;
-          }
-
-          final bool matchesDomain =
-              (isSolutionDomain && domainType == 'solution') ||
-                  (isApplicationDomain && domainType == 'application') ||
-                  (!isSolutionDomain && !isApplicationDomain) ||
-                  (isSolutionDomain && isApplicationDomain);
-
-          if (matchesDomain) {
-            final int up = wordMap['upvotes'] ?? 0;
-            final int down = wordMap['downvotes'] ?? 0;
-            final int score = up - down;
-
-            if (score >= 50) {
-              mostRelatable.add(wordMap);
-            } else if (score >= 20) {
-              middleRelatable.add(wordMap);
-            } else {
-              uncommon.add(wordMap);
-            }
-          }
+    // classify all optionContent entries by score
+    for (final key in options) {
+      final rawList = allOptionContent[key];
+      if (rawList is! List) continue;
+      for (final entry in rawList.cast<Map<String, dynamic>>()) {
+        final domain = entry['domainType'] as String?;
+        final word = entry['option'] as String?;
+        if (word == null || domain == null) continue;
+        final matchesDomain = (isSolutionDomain && domain == 'solution') ||
+            (isApplicationDomain && domain == 'application') ||
+            (!isSolutionDomain && !isApplicationDomain) ||
+            (isSolutionDomain && isApplicationDomain);
+        if (!matchesDomain) continue;
+        final up = entry['upvotes'] as int? ?? 0;
+        final down = entry['downvotes'] as int? ?? 0;
+        final score = up - down;
+        if (score >= 50) {
+          most.add(entry);
+        } else if (score >= 20) {
+          middle.add(entry);
+        } else {
+          uncommon.add(entry);
         }
       }
-
-      List<String> pickRandomWords(
-        List<Map<String, dynamic>> source,
-        int count,
-        Set<String> usedWords,
-      ) {
-        final picked = <String>[];
-        final tempList = List<Map<String, dynamic>>.from(source);
-        while (count > 0 && tempList.isNotEmpty) {
-          final randomIndex = random.nextInt(tempList.length);
-          final wordEntry = tempList.removeAt(randomIndex);
-          final word = wordEntry['option'] as String;
-          if (!usedWords.contains(word)) {
-            picked.add(word);
-            usedWords.add(word);
-            count--;
-          }
-        }
-        return picked;
-      }
-
-      final usedWords = <String>{};
-
-      int needed = totalWordsNeeded;
-
-      final pickedFromMost =
-          pickRandomWords(mostRelatable, needed ~/ 2, usedWords);
-      sectionWords.addAll(pickedFromMost);
-      needed -= pickedFromMost.length;
-
-      final pickedFromMiddle =
-          pickRandomWords(middleRelatable, needed ~/ 2, usedWords);
-      sectionWords.addAll(pickedFromMiddle);
-      needed -= pickedFromMiddle.length;
-
-      final pickedFromUncommon = pickRandomWords(uncommon, needed, usedWords);
-      sectionWords.addAll(pickedFromUncommon);
-      needed -= pickedFromUncommon.length;
-
-      while (sectionWords.length < totalWordsNeeded) {
-        sectionWords.add("");
-      }
-
-      result[sectionTitle] =
-          sectionWords.where((word) => word.isNotEmpty).toList();
     }
+
+    // compute how many for this section
+    int needed = basePerSection + (remainder > 0 ? 1 : 0);
+    if (remainder > 0) remainder--;
+
+    final List<String> words = [];
+    // half from "most", half of remaining from "middle", rest from "uncommon"
+    final pickMost = pickRandomWords(most, needed ~/ 2);
+    words.addAll(pickMost);
+    needed -= pickMost.length;
+
+    final pickMiddle = pickRandomWords(middle, needed ~/ 2);
+    words.addAll(pickMiddle);
+    needed -= pickMiddle.length;
+
+    final pickUncommon = pickRandomWords(uncommon, needed);
+    words.addAll(pickUncommon);
+    needed -= pickUncommon.length;
+
+    // pad with empties if needed, then filter out
+    while (words.length < (basePerSection + (remainder >= 0 ? 0 : 0))) {
+      words.add("");
+    }
+
+    result[title] = words.where((w) => w.isNotEmpty).toList();
   }
 
   return result;
