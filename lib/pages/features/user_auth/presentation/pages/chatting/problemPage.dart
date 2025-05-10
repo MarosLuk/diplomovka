@@ -12,7 +12,7 @@ import 'package:diplomovka/pages/features/user_auth/presentation/pages/chatting/
 import 'package:diplomovka/pages/features/app/providers/chat_provider.dart';
 import 'package:diplomovka/pages/features/app/providers/invitation_provider.dart';
 import 'dart:async';
-import 'package:diplomovka/pages/features/app/providers/problem_provider.dart';
+import 'package:diplomovka/pages/features/app/providers/hat_provider.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/chatting/problemSpec.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
@@ -200,10 +200,10 @@ class _ProblemPageState extends ConsumerState<ProblemPage> {
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: AppStyles.Primary50(),
-          title: Text("Add Custom Container"),
+          title: Text("Add Custom Term"),
           content: TextField(
             controller: _containerController,
-            decoration: InputDecoration(hintText: "Enter container name"),
+            decoration: InputDecoration(hintText: "Enter term name"),
           ),
           actions: [
             TextButton(

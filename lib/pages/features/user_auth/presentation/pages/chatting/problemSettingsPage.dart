@@ -4,7 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
-import 'package:diplomovka/pages/features/app/providers/problem_provider.dart';
+import 'package:diplomovka/pages/features/app/providers/hat_provider.dart';
 import 'package:diplomovka/pages/features/app/global/toast.dart';
 
 class SettingsProblemPage extends ConsumerStatefulWidget {

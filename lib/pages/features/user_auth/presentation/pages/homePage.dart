@@ -10,9 +10,9 @@ import 'package:diplomovka/pages/features/user_auth/presentation/pages/chatting/
 import 'package:diplomovka/pages/features/app/providers/chat_provider.dart';
 import 'package:diplomovka/pages/features/app/providers/invitation_provider.dart';
 import 'dart:async';
-import 'package:diplomovka/pages/features/app/providers/problem_provider.dart';
+import 'package:diplomovka/pages/features/app/providers/hat_provider.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/chatting/problemPage.dart';
-import 'package:diplomovka/pages/features/app/providers/problem_provider.dart';
+import 'package:diplomovka/pages/features/app/providers/hat_provider.dart';
 import 'package:diplomovka/pages/features/user_auth/presentation/pages/GPT_Page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -235,7 +235,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                         color: Theme.of(context).colorScheme.primary),
                   ),
                   subtitle: Text(
-                    "(invited by ${invite['invitedBy'] ?? 'Unknown'})",
+                    "invited by ${invite['invitedBy'] ?? 'Unknown'}",
                     style: AppStyles.labelSmall(
                         color: Theme.of(context).colorScheme.primary),
                   ),

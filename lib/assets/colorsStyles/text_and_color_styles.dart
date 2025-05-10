@@ -185,22 +185,4 @@ class AppStyles {
       ),
     );
   }
-
-  static BoxShadow cardShadow() {
-    return BoxShadow(
-      color: const Color(0xFF9D9D9D).withOpacity(0.1),
-      blurRadius: 16,
-      spreadRadius: 4,
-      offset: const Offset(0, 4),
-    );
-  }
-
-  static BoxShadow cardShadowGradient() {
-    return BoxShadow(
-      color: const Color(0xFF00A6DB).withOpacity(0.25),
-      offset: const Offset(0, 4),
-      blurRadius: 12,
-      spreadRadius: 2,
-    );
-  }
 }

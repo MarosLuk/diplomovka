@@ -199,7 +199,7 @@ class _InspirationPageState extends ConsumerState<InspirationPage> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppStyles.Primary50(),
-        title: const Text("Copy Problem"),
+        title: const Text("Copy this Hat"),
         content: const Text(
             "Do you want to copy this inspiration Hat to your Hats?"),
         actions: [

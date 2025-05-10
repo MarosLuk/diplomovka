@@ -2,7 +2,7 @@ import 'package:diplomovka/pages/features/user_auth/firebase_auth_implementation
 import 'package:diplomovka/pages/features/user_auth/secureStorage/secureStorageService.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:diplomovka/pages/features/app/global/toast.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
