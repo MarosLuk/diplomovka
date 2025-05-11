@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:diplomovka/pages/features/app/providers/hat_provider.dart';
-import 'package:diplomovka/pages/features/components/presentation/problem/problemPage.dart';
+import 'package:diplomovka/pages/features/components/presentation/pages/hat/mainHatPage.dart';
 import 'package:diplomovka/assets/colorsStyles/text_and_color_styles.dart';
 
 import '../../../../app/global/toast.dart';

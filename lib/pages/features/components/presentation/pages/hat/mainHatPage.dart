@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:diplomovka/assets/reusableComponents/reusableComponents.dart';
 import 'package:diplomovka/pages/features/app/providers/profile_provider.dart';
-import 'package:diplomovka/pages/features/components/presentation/problem/problemSettingsPage.dart';
+import 'package:diplomovka/pages/features/components/presentation/pages/hat/hatSettingsPage.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,7 +13,7 @@ import 'package:diplomovka/pages/features/app/providers/chat_provider.dart';
 import 'package:diplomovka/pages/features/app/providers/invitation_provider.dart';
 import 'dart:async';
 import 'package:diplomovka/pages/features/app/providers/hat_provider.dart';
-import 'package:diplomovka/pages/features/components/presentation/problem/problemSpec.dart';
+import 'package:diplomovka/pages/features/components/presentation/pages/hat/hatSpec.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
 class SelectionNotifier extends StateNotifier<Map<String, dynamic>> {

@@ -11,9 +11,8 @@ import 'package:diplomovka/pages/features/app/providers/chat_provider.dart';
 import 'package:diplomovka/pages/features/app/providers/invitation_provider.dart';
 import 'dart:async';
 import 'package:diplomovka/pages/features/app/providers/hat_provider.dart';
-import 'package:diplomovka/pages/features/components/presentation/problem/problemPage.dart';
+import 'package:diplomovka/pages/features/components/presentation/pages/hat/mainHatPage.dart';
 import 'package:diplomovka/pages/features/app/providers/hat_provider.dart';
-import 'package:diplomovka/pages/features/components/presentation/pages/gpt/GPT_Page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends ConsumerStatefulWidget {
